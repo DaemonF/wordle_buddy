@@ -84,9 +84,9 @@ class Guess:
     '''If the Guess contains duplicate letters, discount later occurrences based on the dupe chance.
     '''
     letter = self.word[index]
-    occurrence = occurrences(self.word[:index], letter) + 1
-    return (1 if occurrence <= 1
-      else sum(self.wordlist.letter_dupe_chance[letter][occurrence:]))
+    prev_dupes = occurrences(self.word[:index], letter)
+    return (1 if prev_dupes <= 0
+      else sum(self.wordlist.letter_dupe_chance[letter][prev_dupes:]))
 
   def __str__(self):
     stats = ', '.join(f"{k}: {v:.3f}" for k, v in self.grades.items())
@@ -113,6 +113,7 @@ class WordList(list):
         self.letter_pos_freq[letter][index] += 1
 
         # Track whether a given guess would be green, yellow, or gray for this word.
+        # TODO: This assumes all guesses are equally likely. Use wordlist?
         for guess in letters():
           if guess == letter:
             self.green_weights[guess][index] += 1
@@ -123,7 +124,7 @@ class WordList(list):
 
       # Track how often letters appear within a word.
       for letter in set(word):
-        self.letter_dupe_chance[letter][occurrences(word, letter)] += 1
+        self.letter_dupe_chance[letter][occurrences(word, letter) - 1] += 1
 
     # Normalize
     total_words = len(self)
@@ -134,7 +135,9 @@ class WordList(list):
       for index in range(word_length):
         self.letter_pos_freq[letter][index] /= total_words
 
-        # TODO: This is just incorrect...
+        # TODO: This is just incorrect... The goal was to replace the manual
+        # weighting for greens, yellows, and grays, but these need to be
+        # inverted and re-normalized. Maybe on-use if this can be reused for bifur.
         for weights in [self.green_weights, self.yellow_weights, self.gray_weights]:
           weights[letter][index] = weights[letter][index] / total_words
 
@@ -155,7 +158,7 @@ class WordList(list):
       elif score == gray_char:
         new_list = [w for w in new_list if letter not in w]
       else:
-        throw('Huh?')
+        throw(f"Unknown score character: '{score}'.")
     return WordList(new_list)
 
 
@@ -185,6 +188,32 @@ def main():
     _print_top_guesses(guesses, "By positional letter frequency:", 'freq')
     _print_top_guesses(guesses, "By potential for clues:", 'clues')
     _print_top_guesses(guesses, "By maximum wordlist bifurcation:", 'bifur')
+
+    while True:
+      entry = input("Enter a letter or word: ")
+      if entry == "":
+        break
+      elif len(entry) == 1:
+        def fmt_stat(stat):
+          return f"{stat: >5.1%}"
+        def fmt_stats(list):
+          return ', '.join(fmt_stat(e) for e in list)
+
+        print(f"  Overall frequency: {fmt_stat(list.letter_freq[entry])}")
+        print(f"  Positional frequency:\n    {fmt_stats(list.letter_pos_freq[entry])}")
+        print()
+        print(f"  Positional chance of green:\n    {fmt_stats(list.green_weights[entry])}")
+        print(f"  Positional chance of yellow:\n    {fmt_stats(list.yellow_weights[entry])}")
+        print(f"  Positional chance of gray:\n    {fmt_stats(list.gray_weights[entry])}")
+        print()
+        print(f"  Distribution of count per word it appears in:\n    {fmt_stats(list.letter_dupe_chance[entry])}")
+      elif len(entry) == word_length:
+        print(f"  {Guess(list, entry)}")
+        if entry not in list:
+          print("  Note: Not in word list.")
+      else:
+        print(f"ERROR: Invalid length. Must be 1 or {word_length} characters.")
+      print()
 
     return
 
