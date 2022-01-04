@@ -3,12 +3,14 @@
 import sys
 
 #dict_file = 'words_alpha.txt'
-dict_file = 'scrabble_words.txt'
+#dict_file = 'scrabble_words.txt'
+dict_file = 'sowpods.txt'
 word_length = 5
+strategy = 'freq'
 
 # Weights used when assesing the relative value of certain results.
 green_weight = 1 / word_length
-yellow_weight = green_weight / 5
+yellow_weight = green_weight / 2
 gray_weight = yellow_weight / 5
 
 # Characters used to display the score.
@@ -33,9 +35,11 @@ class Guess:
     self.wordlist = wordlist
     self.word = word
 
-    self.freq_grade = self._grade_by_frequency()
-    self.clues_grade = self._grade_by_potential_clues()
-    self.bifur_grade = self._grade_by_bifurcation()
+    self.grades = {
+      'freq': self._grade_by_frequency(),
+      'clues': self._grade_by_potential_clues(),
+      'bifur': self._grade_by_bifurcation(),
+    }
 
     self.score = [None for x in range(word_length)]  # The actual result from Wordle.
 
@@ -85,7 +89,8 @@ class Guess:
       else sum(self.wordlist.letter_dupe_chance[letter][occurrence:]))
 
   def __str__(self):
-    return f"{self.word} (freq: {self.freq_grade:.3f}, clues: {self.clues_grade:.3f}, bifur: {self.bifur_grade:.3f})"
+    stats = ', '.join(f"{k}: {v:.3f}" for k, v in self.grades.items())
+    return f"{self.word} ({stats})"
 
 
 class WordList(list):
@@ -122,7 +127,6 @@ class WordList(list):
 
     # Normalize
     total_words = len(self)
-    #total_letters = sum(self.letter_freq.values())
     for letter in letters():
       self.letter_freq[letter] /= total_words
 
@@ -171,22 +175,16 @@ def main():
 
     guesses = [Guess(list, word) for word in list]
 
-    print("By positional letter frequency:")
-    by_freq = sorted(guesses, key=lambda x: x.freq_grade, reverse=True)
-    for guess in by_freq[:5]:
-      print(f"  {guess}")
-    print()
+    def _print_top_guesses(guesses, title, strategy=strategy, limit=5):
+      print(title)
+      top = sorted(guesses, key=lambda x: x.grades[strategy], reverse=True)
+      for guess in top[:limit]:
+        print(f"  {guess}")
+      print()
 
-    print("By potential for clues:")
-    by_clues = sorted(guesses, key=lambda x: x.clues_grade, reverse=True)
-    for guess in by_clues[:5]:
-      print(f"  {guess}")
-    print()
-
-    print("By maximum wordlist bifurcation:")
-    by_bifur = sorted(guesses, key=lambda x: x.bifur_grade, reverse=True)
-    for guess in by_bifur[:5]:
-      print(f"  {guess}")
+    _print_top_guesses(guesses, "By positional letter frequency:", 'freq')
+    _print_top_guesses(guesses, "By potential for clues:", 'clues')
+    _print_top_guesses(guesses, "By maximum wordlist bifurcation:", 'bifur')
 
     return
 
@@ -197,18 +195,14 @@ def main():
       print(f"List has {len(list)} words: {', '.join(list[:3])}")
 
       guesses = [Guess(list, word) for word in list]
-
-      guess = sorted(guesses, key=lambda x:
-        x.freq_grade, reverse=True)[0]
+      guess = sorted(guesses, key=lambda x: x.grades[strategy], reverse=True)[0]
       print(f"Try: {guess}")
 
-      while True:
+      while None in guess.score:
         resp = input("What was the score? ")
-        if len(resp) != word_length:
-          continue
-        for index, char in enumerate(resp):
-          guess.score[index] = char
-        break
+        if len(resp) == word_length:
+          for index, char in enumerate(resp):
+            guess.score[index] = char
       print()
 
       if occurrences(guess.score, green_char) == word_length:
@@ -220,6 +214,9 @@ def main():
     return
 
   answer = sys.argv[1]
+  if answer not in list:
+    print(f"'{answer}' is not in word list. Exiting...")
+    return
 
   tries = 0
   while True:
@@ -227,9 +224,7 @@ def main():
     print(f"List has {len(list)} words: {', '.join(list[:3])}")
 
     guesses = [Guess(list, word) for word in list]
-
-    guess = sorted(guesses, key=lambda x:
-      x.freq_grade, reverse=True)[0]
+    guess = sorted(guesses, key=lambda x: x.grades[strategy], reverse=True)[0]
     print(f"Try: {guess}")
 
     for index, letter in enumerate(guess.word):
