@@ -2,8 +2,8 @@
 
 import sys
 
-dict_file = 'words_alpha.txt'
-#dict_file = 'scrabble_words.txt'
+#dict_file = 'words_alpha.txt'
+dict_file = 'scrabble_words.txt'
 word_length = 5
 
 # Weights used when assesing the relative value of certain results.
@@ -37,7 +37,7 @@ class Guess:
     self.clues_grade = self._grade_by_potential_clues()
     self.bifur_grade = self._grade_by_bifurcation()
 
-    self.score = ['?' for x in range(word_length)]  # The actual result from Wordle.
+    self.score = [None for x in range(word_length)]  # The actual result from Wordle.
 
   def _grade_by_frequency(self):
     '''Grades a guess base on positional letter frequency in the wordlist.
@@ -190,6 +190,35 @@ def main():
 
     return
 
+  if sys.argv[1] == '-i':
+    tries = 0
+    while True:
+      tries += 1
+      print(f"List has {len(list)} words: {', '.join(list[:3])}")
+
+      guesses = [Guess(list, word) for word in list]
+
+      guess = sorted(guesses, key=lambda x:
+        x.freq_grade, reverse=True)[0]
+      print(f"Try: {guess}")
+
+      while True:
+        resp = input("What was the score? ")
+        if len(resp) != word_length:
+          continue
+        for index, char in enumerate(resp):
+          guess.score[index] = char
+        break
+      print()
+
+      if occurrences(guess.score, green_char) == word_length:
+        break
+
+      list = list.sublist(guess)
+
+    print(f"Got it in {tries}/6 tries.")
+    return
+
   answer = sys.argv[1]
 
   tries = 0
@@ -214,7 +243,7 @@ def main():
     print(f"Score: {''.join(guess.score)}")
     print()
 
-    if occurrences(guess.score, '!') == word_length:
+    if occurrences(guess.score, green_char) == word_length:
       break
 
     list = list.sublist(guess)
