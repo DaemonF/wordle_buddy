@@ -6,7 +6,8 @@ import sys
 #dict_file = 'scrabble_words.txt'
 dict_file = 'sowpods.txt'
 word_length = 5
-strategy = 'freq'
+#strategy = 'freq'
+strategy = 'clues'
 
 # Weights used when assesing the relative value of certain results.
 green_weight = 1 / word_length
@@ -30,6 +31,12 @@ def letters():
 def occurrences(word, letter):
   return len(list(filter(lambda x: x == letter, word)))
 
+def fmt_stat(stat):
+  return f"{stat: >5.3f}"
+def fmt_stats(list):
+  return ', '.join(fmt_stat(e) for e in list)
+
+
 class Guess:
   def __init__(self, wordlist, word):
     self.wordlist = wordlist
@@ -49,29 +56,42 @@ class Guess:
     grade = 0
     for index, letter in enumerate(self.word):
       grade += (self.wordlist.letter_pos_freq[letter][index]
-                * self._dupe_modifier(index)
-                / word_length)
+                * self._dupe_modifier(letter, index)
+               ) / word_length
     return grade
 
   def _grade_by_potential_clues(self):
     '''Grades a guess by how many potential clues it could give based on the wordlist.
     '''
+    debug = False
     grade = 0
     for index, letter in enumerate(self.word):
       # The number of words that would make this guess green, yellow, or gray.
-      greens = self.wordlist.letter_pos_freq[letter][index]
-      yellows = self.wordlist.letter_freq[letter] - greens
-      grays = 1 - greens - yellows
+      greens = self.wordlist.green_chance[letter][index]
+      yellows = self.wordlist.yellow_chance[letter][index]
+      grays = self.wordlist.gray_chance[letter][index]
+      if debug:
+        print(f"{self.word}[{index}]")
+        print(f"pre%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
 
       # In Wordle, duplicate letters only count as yellow if the answer has the same or more duplicates. Model that.
-      yellows *= self._dupe_modifier(index)
+      yellows *= self._dupe_modifier(letter, index)
       # Only the first gray for a given letter matters.
-      grays *= 0 if self._dupe_modifier(index) < 1.0 else 1
+      grays *= 0 if self._dupe_modifier(letter, index) < 1.0 else 1
+      if debug:
+        print(f"adj%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
 
-      # Weight each category by how valuable it would be at this index.
+      # Weight each category by how much it would split up the wordlist.
+      green_weight = 1/2 - abs(1/2 - greens)
+      yellow_weight = 1/2 - abs(1/2 - yellows)
+      gray_weight = 1/2 - abs(1/2 - grays)
+      if debug:
+        print(f"weights: {fmt_stats([green_weight, yellow_weight, gray_weight])} (sum: {fmt_stat(green_weight + yellow_weight + gray_weight)})")
+
       grade += (greens * green_weight
                 + yellows * yellow_weight
-                + grays * gray_weight)
+                + grays * gray_weight
+               ) / word_length
     return grade
 
   def _grade_by_bifurcation(self):
@@ -80,16 +100,16 @@ class Guess:
     # TODO
     return 0
 
-  def _dupe_modifier(self, index):
+  def _dupe_modifier(self, letter, index):
     '''If the Guess contains duplicate letters, discount later occurrences based on the dupe chance.
     '''
-    letter = self.word[index]
+    # TODO: Need to handle greens, both before and after index and not penalize. (ie. green_chance == 1.0)
     prev_dupes = occurrences(self.word[:index], letter)
     return (1 if prev_dupes <= 0
       else sum(self.wordlist.letter_dupe_chance[letter][prev_dupes:]))
 
   def __str__(self):
-    stats = ', '.join(f"{k}: {v:.3f}" for k, v in self.grades.items())
+    stats = ', '.join(f"{k}: {fmt_stat(v)}" for k, v in self.grades.items())
     return f"{self.word} ({stats})"
 
 
@@ -100,9 +120,9 @@ class WordList(list):
     self.letter_freq = {letter:0 for letter in letters()}
     self.letter_pos_freq = {letter:[0 for x in range(word_length)] for letter in letters()}
 
-    self.green_weights = {letter:[0 for x in range(word_length)] for letter in letters()}
-    self.yellow_weights = {letter:[0 for x in range(word_length)] for letter in letters()}
-    self.gray_weights = {letter:[0 for x in range(word_length)] for letter in letters()}
+    self.green_chance = {letter:[0 for x in range(word_length)] for letter in letters()}
+    self.yellow_chance = {letter:[0 for x in range(word_length)] for letter in letters()}
+    self.gray_chance = {letter:[0 for x in range(word_length)] for letter in letters()}
 
     self.letter_dupe_chance = {letter:[0 for x in range(word_length)] for letter in letters()}
 
@@ -116,11 +136,11 @@ class WordList(list):
         # TODO: This assumes all guesses are equally likely. Use wordlist?
         for guess in letters():
           if guess == letter:
-            self.green_weights[guess][index] += 1
+            self.green_chance[guess][index] += 1
           elif guess in word:
-            self.yellow_weights[guess][index] += 1
+            self.yellow_chance[guess][index] += 1
           else:
-            self.gray_weights[guess][index] += 1
+            self.gray_chance[guess][index] += 1
 
       # Track how often letters appear within a word.
       for letter in set(word):
@@ -135,11 +155,9 @@ class WordList(list):
       for index in range(word_length):
         self.letter_pos_freq[letter][index] /= total_words
 
-        # TODO: This is just incorrect... The goal was to replace the manual
-        # weighting for greens, yellows, and grays, but these need to be
-        # inverted and re-normalized. Maybe on-use if this can be reused for bifur.
-        for weights in [self.green_weights, self.yellow_weights, self.gray_weights]:
-          weights[letter][index] = weights[letter][index] / total_words
+        self.green_chance[letter][index] /= total_words
+        self.yellow_chance[letter][index] /= total_words
+        self.gray_chance[letter][index] /= total_words
 
         if total_occurrences > 0:
           self.letter_dupe_chance[letter][index] /= total_occurrences
@@ -156,6 +174,7 @@ class WordList(list):
       elif score == yellow_char:
         new_list = [w for w in new_list if w[index] != letter and letter in w]
       elif score == gray_char:
+        # TODO: Unless the char is green later in word.
         new_list = [w for w in new_list if letter not in w]
       else:
         throw(f"Unknown score character: '{score}'.")
@@ -202,9 +221,9 @@ def main():
         print(f"  Overall frequency: {fmt_stat(list.letter_freq[entry])}")
         print(f"  Positional frequency:\n    {fmt_stats(list.letter_pos_freq[entry])}")
         print()
-        print(f"  Positional chance of green:\n    {fmt_stats(list.green_weights[entry])}")
-        print(f"  Positional chance of yellow:\n    {fmt_stats(list.yellow_weights[entry])}")
-        print(f"  Positional chance of gray:\n    {fmt_stats(list.gray_weights[entry])}")
+        print(f"  Positional chance of green:\n    {fmt_stats(list.green_chance[entry])}")
+        print(f"  Positional chance of yellow:\n    {fmt_stats(list.yellow_chance[entry])}")
+        print(f"  Positional chance of gray:\n    {fmt_stats(list.gray_chance[entry])}")
         print()
         print(f"  Distribution of count per word it appears in:\n    {fmt_stats(list.letter_dupe_chance[entry])}")
       elif len(entry) == word_length:
@@ -218,6 +237,8 @@ def main():
     return
 
   if sys.argv[1] == '-i':
+    print(f"Strategy: {strategy}")
+    print()
     tries = 0
     while True:
       tries += 1
@@ -247,6 +268,8 @@ def main():
     print(f"'{answer}' is not in word list. Exiting...")
     return
 
+  print(f"Strategy: {strategy}")
+  print()
   tries = 0
   while True:
     tries += 1
@@ -259,6 +282,7 @@ def main():
     for index, letter in enumerate(guess.word):
       if letter == answer[index]:
         guess.score[index] = green_char
+      # TODO: Need to subtract greens later in the word (rebus).
       elif letter in answer and occurrences(answer, letter) > occurrences(guess.word[:index], letter):
         guess.score[index] = yellow_char
       else:
