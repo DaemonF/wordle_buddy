@@ -19,14 +19,9 @@ green_char = '!'
 yellow_char = '?'
 gray_char = 'x'
 
-def c_range(start, end):
-  '''Generates the characters from `start` to `end`, inclusive.
-  '''
-  for c in range(ord(start), ord(end)+1):
-    yield chr(c)
+# Letters from 'a' to 'z', for convenience.
+letters = [chr(x) for x in range(ord('a'), ord('z') + 1)]
 
-def letters():
-  return c_range('a', 'z')
 
 def occurrences(word, letter):
   return len(list(filter(lambda x: x == letter, word)))
@@ -117,14 +112,14 @@ class WordList(list):
   def __init__(self, wordlist):
     super(WordList, self).__init__(wordlist)
 
-    self.letter_freq = {letter:0 for letter in letters()}
-    self.letter_pos_freq = {letter:[0 for x in range(word_length)] for letter in letters()}
+    self.letter_freq = {letter:0 for letter in letters}
+    self.letter_pos_freq = {letter:[0 for x in range(word_length)] for letter in letters}
 
-    self.green_chance = {letter:[0 for x in range(word_length)] for letter in letters()}
-    self.yellow_chance = {letter:[0 for x in range(word_length)] for letter in letters()}
-    self.gray_chance = {letter:[0 for x in range(word_length)] for letter in letters()}
+    self.green_chance = {letter:[0 for x in range(word_length)] for letter in letters}
+    self.yellow_chance = {letter:[0 for x in range(word_length)] for letter in letters}
+    self.gray_chance = {letter:[0 for x in range(word_length)] for letter in letters}
 
-    self.letter_dupe_chance = {letter:[0 for x in range(word_length)] for letter in letters()}
+    self.letter_dupe_chance = {letter:[0 for x in range(word_length)] for letter in letters}
 
     for word in self:
       for index, letter in enumerate(word):
@@ -134,7 +129,7 @@ class WordList(list):
 
         # Track whether a given guess would be green, yellow, or gray for this word.
         # TODO: This assumes all guesses are equally likely. Use wordlist?
-        for guess in letters():
+        for guess in letters:
           if guess == letter:
             self.green_chance[guess][index] += 1
           elif guess in word:
@@ -148,7 +143,7 @@ class WordList(list):
 
     # Normalize
     total_words = len(self)
-    for letter in letters():
+    for letter in letters:
       self.letter_freq[letter] /= total_words
 
       total_occurrences = sum(self.letter_dupe_chance[letter])
