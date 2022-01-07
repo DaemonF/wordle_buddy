@@ -174,7 +174,7 @@ class WordList(list):
       elif score == yellow_char:
         new_list = [w for w in new_list if w[index] != letter and letter in w]
       elif score == gray_char:
-        # TODO: Unless the char is green later in word.
+        # TODO: Unless the char is yellow or green in word.
         new_list = [w for w in new_list if letter not in w]
       else:
         throw(f"Unknown score character: '{score}'.")
@@ -282,7 +282,7 @@ def main():
     for index, letter in enumerate(guess.word):
       if letter == answer[index]:
         guess.score[index] = green_char
-      # TODO: Need to subtract greens later in the word (rebus).
+      # TODO: Need to subtract greens or yellows elsewhere in the word ('rebus' with a guess of 'seres').
       elif letter in answer and occurrences(answer, letter) > occurrences(guess.word[:index], letter):
         guess.score[index] = yellow_char
       else:
