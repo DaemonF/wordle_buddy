@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 
+import argparse
+import functools
+import multiprocessing
+import os
 import sys
 
-#dict_file = 'words_alpha.txt'
-#dict_file = 'scrabble_words.txt'
-dict_file = 'sowpods.txt'
-word_length = 5
-#strategy = 'freq'
-strategy = 'clues'
 
-# Weights used when assesing the relative value of certain results.
-green_weight = 1 / word_length
-yellow_weight = green_weight / 2
-gray_weight = yellow_weight / 5
+# The word size for the game.
+word_length = 5
 
 # Characters used to display the score.
 green_char = '!'
@@ -28,6 +24,7 @@ def occurrences(word, letter):
 
 def fmt_stat(stat):
   return f"{stat: >5.3f}"
+
 def fmt_stats(list):
   return ', '.join(fmt_stat(e) for e in list)
 
@@ -176,23 +173,11 @@ class WordList(list):
     return WordList(new_list)
 
 
-def main():
-  raw_list = []
-  with open(dict_file, 'r') as f:
-    for l in f.readlines():
-      entry = l.strip()
-      if len(entry) == 5:
-        raw_list.append(entry)
-
-  list = WordList(raw_list)
-
-  if len(sys.argv) < 2:
-    print("No answer given as an argument. Showing wordlist and starting-word stats...")
-    print()
-
+def show_stats_interactive(list):
+  if True:  # FIXME: de-indent
     guesses = [Guess(list, word) for word in list]
 
-    def _print_top_guesses(guesses, title, strategy=strategy, limit=5):
+    def _print_top_guesses(guesses, title, strategy, limit=5):
       print(title)
       top = sorted(guesses, key=lambda x: x.grades[strategy], reverse=True)
       for guess in top[:limit]:
@@ -229,9 +214,8 @@ def main():
         print(f"ERROR: Invalid length. Must be 1 or {word_length} characters.")
       print()
 
-    return
-
-  if sys.argv[1] == '-i':
+def play_game_interactive(list, strategy):
+  if True:  # FIXME: de-indent
     print(f"Strategy: {strategy}")
     print()
     tries = 0
@@ -256,23 +240,26 @@ def main():
       list = list.sublist(guess)
 
     print(f"Got it in {tries}/6 tries.")
-    return
 
-  answer = sys.argv[1]
+def play_game_with_answer(list, strategy, answer, quiet=False):
+  def _print(*args):
+    if not quiet:
+      print(*args)
+
   if answer not in list:
-    print(f"'{answer}' is not in word list. Exiting...")
+    _print(f"'{answer}' is not in word list. Exiting...")
     return
 
-  print(f"Strategy: {strategy}")
-  print()
+  _print(f"Strategy: {strategy}")
+  _print()
   tries = 0
   while True:
     tries += 1
-    print(f"List has {len(list)} words: {', '.join(list[:3])}")
+    _print(f"List has {len(list)} words: {', '.join(list[:3])}")
 
     guesses = [Guess(list, word) for word in list]
     guess = sorted(guesses, key=lambda x: x.grades[strategy], reverse=True)[0]
-    print(f"Try: {guess}")
+    _print(f"Try: {guess}")
 
     for index, letter in enumerate(guess.word):
       if letter == answer[index]:
@@ -283,15 +270,87 @@ def main():
       else:
         guess.score[index] = gray_char
 
-    print(f"Score: {''.join(guess.score)}")
-    print()
+    _print(f"Score: {''.join(guess.score)}")
+    _print()
 
     if occurrences(guess.score, green_char) == word_length:
       break
 
     list = list.sublist(guess)
 
-  print(f"Got it in {tries}/6 tries.")
+  _print(f"Got it in {tries}/6 tries.")
+  return tries
+
+def _regression_test(list, strategy, answer):
+  try:
+    return play_game_with_answer(list, strategy, answer, quiet=True)
+  except ZeroDivisionError:
+    return 0
+
+def regression_test(list, strategy, sampling):
+  answers = [word for index, word in enumerate(list) if index % sampling == 0]
+  total = len(answers)
+  wins = [0 for x in range(20)]
+  crashes = 0
+
+  with multiprocessing.Pool(os.cpu_count()) as pool:
+    results = pool.imap(functools.partial(_regression_test, list, strategy), answers)
+
+    interval = max(1, total // 100)
+    for index, result in enumerate(results):
+      if index % interval == interval - 1:
+        print(f"{(index + 1) / total:.0%}", file=sys.stderr)
+
+      if result == 0:
+        crashes += 1
+      else:
+        wins[result - 1] += 1
+
+  print(f"Regression test")
+  print(f"  List: {len(list)} words")
+  print(f"  Games: {len(answers)} answers (sampling: 1/{sampling})")
+  print(f"  Strategy: {strategy}")
+  print()
+  print(f"Stats of {total} games:")
+  print(f"  Crashes: {crashes} {crashes / total:.2%}")
+  print(f"  Wins:")
+  for index, count in enumerate(wins):
+    def perc(n, d):
+      return f"{n/d:.1%}"
+    print(f"    {index+1:>3} {count:>4}  {perc(count, total):>6}  {perc(sum(wins[:index+1]), total):>6}")
+
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--dict_file', default='sowpods.txt')
+  parser.add_argument('--strategy', default='freq')
+  # Play game with known answer.
+  parser.add_argument('--answer')
+  # Play game interactively.
+  parser.add_argument('-i', dest='mode', action='store_const', const='interactive')
+  # Run a regression test.
+  parser.add_argument('-t', dest='mode', action='store_const', const='test')
+  parser.add_argument('--sampling', default=10, type=int)
+  args = parser.parse_args()
+
+  raw_list = []
+  with open(args.dict_file, 'r') as f:
+    for l in f.readlines():
+      entry = l.strip()
+      if len(entry) == 5:
+        raw_list.append(entry)
+  list = WordList(raw_list)
+
+  if args.mode == 'test':
+    regression_test(list, args.strategy, args.sampling)
+  elif args.mode == 'interactive':
+    play_game_interactive(list, args.strategy)
+  elif args.answer is not None:
+    play_game_with_answer(list, args.strategy, args.answer)
+  else:
+    print("Showing wordlist and starting-word stats...")
+    print()
+    show_stats_interactive(list)
 
 
 if __name__ == '__main__':
