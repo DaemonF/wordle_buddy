@@ -20,7 +20,7 @@ yellow_char = '?'
 gray_char = 'x'
 
 # Letters from 'a' to 'z', for convenience.
-letters = [chr(x) for x in range(ord('a'), ord('z') + 1)]
+letters = [chr(ordinal) for ordinal in range(ord('a'), ord('z') + 1)]
 
 # All strategies that can be used.
 class Strategy(Enum):
@@ -43,8 +43,8 @@ def occurrences(word, letter):
 def fmt_stat(stat):
   return f"{stat: >5.3f}"
 
-def fmt_stats(list):
-  return ', '.join(fmt_stat(e) for e in list)
+def fmt_stats(stats):
+  return ', '.join(fmt_stat(e) for e in stats)
 
 
 class Guess:
@@ -52,7 +52,7 @@ class Guess:
     self.wordlist = wordlist
     self.word = word
 
-    self.score = [None for x in range(word_length)]  # The actual result from Wordle.
+    self.score = [None for _ in range(word_length)]  # The actual result from Wordle.
 
   def grade(self, strategy: Strategy):
     if strategy == Strategy.FREQ:
@@ -133,13 +133,13 @@ class WordList(list):
     super(WordList, self).__init__(wordlist)
 
     self.letter_freq = {letter:0 for letter in letters}
-    self.letter_pos_freq = {letter:[0 for x in range(word_length)] for letter in letters}
+    self.letter_pos_freq = {letter:[0 for _ in range(word_length)] for letter in letters}
 
-    self.green_chance = {letter:[0 for x in range(word_length)] for letter in letters}
-    self.yellow_chance = {letter:[0 for x in range(word_length)] for letter in letters}
-    self.gray_chance = {letter:[0 for x in range(word_length)] for letter in letters}
+    self.green_chance = {letter:[0 for _ in range(word_length)] for letter in letters}
+    self.yellow_chance = {letter:[0 for _ in range(word_length)] for letter in letters}
+    self.gray_chance = {letter:[0 for _ in range(word_length)] for letter in letters}
 
-    self.letter_dupe_chance = {letter:[0 for x in range(word_length)] for letter in letters}
+    self.letter_dupe_chance = {letter:[0 for _ in range(word_length)] for letter in letters}
 
     for word in self:
       for index, letter in enumerate(word):
@@ -181,23 +181,23 @@ class WordList(list):
   def sublist(self, scored_guess):
     '''Returns a new WordList by removing all incompatible words from this wordlist.
     '''
-    new_list = self
+    new_wordlist = self
     for index, letter in enumerate(scored_guess.word):
       score = scored_guess.score[index]
       if score == green_char:
-        new_list = [w for w in new_list if w[index] == letter]
+        new_wordlist = [w for w in new_wordlist if w[index] == letter]
       elif score == yellow_char:
-        new_list = [w for w in new_list if w[index] != letter and letter in w]
+        new_wordlist = [w for w in new_wordlist if w[index] != letter and letter in w]
       elif score == gray_char:
         # TODO: Unless the char is yellow or green in word.
-        new_list = [w for w in new_list if letter not in w]
+        new_wordlist = [w for w in new_wordlist if letter not in w]
       else:
         throw(f"Unknown score character: '{score}'.")
-    return WordList(new_list)
+    return WordList(new_wordlist)
 
 
-def show_stats_interactive(list):
-  guesses = [Guess(list, word) for word in list]
+def show_stats_interactive(wordlist):
+  guesses = [Guess(wordlist, word) for word in wordlist]
 
   for strategy in Strategy:
     print(f"By {strategy.description}:")
@@ -213,26 +213,26 @@ def show_stats_interactive(list):
     elif len(entry) == 1:
       def fmt_stat(stat):
         return f"{stat: >5.1%}"
-      def fmt_stats(list):
-        return ', '.join(fmt_stat(e) for e in list)
+      def fmt_stats(stats):
+        return ', '.join(fmt_stat(e) for e in stats)
 
-      print(f"  Overall frequency: {fmt_stat(list.letter_freq[entry])}")
-      print(f"  Positional frequency:\n    {fmt_stats(list.letter_pos_freq[entry])}")
+      print(f"  Overall frequency: {fmt_stat(wordlist.letter_freq[entry])}")
+      print(f"  Positional frequency:\n    {fmt_stats(wordlist.letter_pos_freq[entry])}")
       print()
-      print(f"  Positional chance of green:\n    {fmt_stats(list.green_chance[entry])}")
-      print(f"  Positional chance of yellow:\n    {fmt_stats(list.yellow_chance[entry])}")
-      print(f"  Positional chance of gray:\n    {fmt_stats(list.gray_chance[entry])}")
+      print(f"  Positional chance of green:\n    {fmt_stats(wordlist.green_chance[entry])}")
+      print(f"  Positional chance of yellow:\n    {fmt_stats(wordlist.yellow_chance[entry])}")
+      print(f"  Positional chance of gray:\n    {fmt_stats(wordlist.gray_chance[entry])}")
       print()
-      print(f"  Distribution of count per word it appears in:\n    {fmt_stats(list.letter_dupe_chance[entry])}")
+      print(f"  Distribution of count per word it appears in:\n    {fmt_stats(wordlist.letter_dupe_chance[entry])}")
     elif len(entry) == word_length:
-      print(f"  {Guess(list, entry)}")
-      if entry not in list:
-        print("  Note: Not in word list.")
+      print(f"  {Guess(wordlist, entry)}")
+      if entry not in wordlist:
+        print("  Note: Not in wordlist.")
     else:
       print(f"ERROR: Invalid length. Must be 1 or {word_length} characters.")
     print()
 
-def play_game(list, strategy, scoring_func, quiet=False):
+def play_game(wordlist, strategy, scoring_func, quiet=False):
   def _print(*args):
     if not quiet:
       print(*args)
@@ -242,9 +242,9 @@ def play_game(list, strategy, scoring_func, quiet=False):
   tries = 0
   while True:
     tries += 1
-    _print(f"List has {len(list)} words: {', '.join(list[:3])}")
+    _print(f"List has {len(wordlist)} words: {', '.join(wordlist[:3])}")
 
-    guesses = [Guess(list, word) for word in list]
+    guesses = [Guess(wordlist, word) for word in wordlist]
     guess = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)[0]
     _print(f"Try: {guess}")
 
@@ -253,12 +253,12 @@ def play_game(list, strategy, scoring_func, quiet=False):
     if occurrences(guess.score, green_char) == word_length:
       break
 
-    list = list.sublist(guess)
+    wordlist = wordlist.sublist(guess)
 
   _print(f"Got it in {tries}/6 tries.")
   return tries
 
-def play_game_interactive(list, strategy):
+def play_game_interactive(wordlist, strategy):
   def scoring_func(guess):
     while None in guess.score:
       resp = input("What was the score? ")
@@ -266,47 +266,52 @@ def play_game_interactive(list, strategy):
         for index, char in enumerate(resp):
           guess.score[index] = char
     print()
-  return play_game(list, strategy, scoring_func)
+  return play_game(wordlist, strategy, scoring_func)
 
-def play_game_with_answer(list, strategy, answer, quiet=False):
+def play_game_with_answer(wordlist, strategy, answer, quiet=False):
   def _print(*args):
     if not quiet:
       print(*args)
 
-  if answer not in list:
-    _print(f"'{answer}' is not in word list. Exiting...")
+  if answer not in wordlist:
+    _print(f"'{answer}' is not in wordlist. Exiting...")
     return
 
   def scoring_func(guess):
+    remaining = list(answer)
+    guess.score = [gray_char for _ in range(word_length)]
     for index, letter in enumerate(guess.word):
-      if letter == answer[index]:
+      if letter == remaining[index]:
         guess.score[index] = green_char
-      # TODO: Need to subtract greens or yellows elsewhere in the word ('rebus' with a guess of 'seres').
-      elif letter in answer and occurrences(answer, letter) > occurrences(guess.word[:index], letter):
+        remaining[index] = None
+    for index, letter in enumerate(guess.word):
+      if guess.score[index] is gray_char and letter in remaining:
         guess.score[index] = yellow_char
-      else:
+        remaining[remaining.index(letter)] = None
+    for index, letter in enumerate(guess.word):
+      if guess.score[index] is None:
         guess.score[index] = gray_char
     _print(f"Score: {''.join(guess.score)}")
     _print()
-  return play_game(list, strategy, scoring_func, quiet=quiet)
+  return play_game(wordlist, strategy, scoring_func, quiet=quiet)
 
-def _regression_test(list, strategy, answer):
+def _regression_test(wordlist, strategy, answer):
   try:
-    return play_game_with_answer(list, strategy, answer, quiet=True)
+    return play_game_with_answer(wordlist, strategy, answer, quiet=True)
   except ZeroDivisionError:
     return 0
 
-def regression_test(list, strategy, sampling):
-  answers = [word for index, word in enumerate(list) if index % sampling == 0]
+def regression_test(wordlist, strategy, sampling):
+  answers = [word for index, word in enumerate(wordlist) if index % sampling == 0]
   total = len(answers)
-  wins = [0 for x in range(20)]
+  wins = [0 for _ in range(20)]
   crashes = 0
 
   start = time()
   parallelism = os.cpu_count()
   chunk_size = 5
   with multiprocessing.Pool(parallelism) as pool:
-    results = pool.imap(partial(_regression_test, list, strategy), answers, chunk_size)
+    results = pool.imap(partial(_regression_test, wordlist, strategy), answers, chunk_size)
 
     for index, result in tqdm(enumerate(results), total=total):
       if result == 0:
@@ -316,7 +321,7 @@ def regression_test(list, strategy, sampling):
   stop = time()
 
   print(f"Regression test")
-  print(f"  List: {len(list)} words")
+  print(f"  List: {len(wordlist)} words")
   print(f"  Games: {len(answers)} answers (sampling: 1/{sampling})")
   print(f"  Strategy: {strategy.value}")
   print()
@@ -344,24 +349,24 @@ def main():
   parser.add_argument('--sampling', default=10, type=int)
   args = parser.parse_args()
 
-  raw_list = []
+  raw_wordlist = []
   with open(args.dict_file, 'r') as f:
     for l in f.readlines():
       entry = l.strip()
       if len(entry) == 5:
-        raw_list.append(entry)
-  list = WordList(raw_list)
+        raw_wordlist.append(entry)
+  wordlist = WordList(raw_wordlist)
 
   if args.mode == 'test':
-    regression_test(list, args.strategy, args.sampling)
+    regression_test(wordlist, args.strategy, args.sampling)
   elif args.mode == 'interactive':
-    play_game_interactive(list, args.strategy)
+    play_game_interactive(wordlist, args.strategy)
   elif args.answer is not None:
-    play_game_with_answer(list, args.strategy, args.answer)
+    play_game_with_answer(wordlist, args.strategy, args.answer)
   else:
     print("Showing wordlist and starting-word stats...")
     print()
-    show_stats_interactive(list)
+    show_stats_interactive(wordlist)
 
 
 if __name__ == '__main__':
