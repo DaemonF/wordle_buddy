@@ -5,6 +5,7 @@ import functools
 import multiprocessing
 import os
 import sys
+from tqdm import tqdm
 
 
 # The word size for the game.
@@ -296,11 +297,7 @@ def regression_test(list, strategy, sampling):
   with multiprocessing.Pool(os.cpu_count()) as pool:
     results = pool.imap(functools.partial(_regression_test, list, strategy), answers)
 
-    interval = max(1, total // 100)
-    for index, result in enumerate(results):
-      if index % interval == interval - 1:
-        print(f"{(index + 1) / total:.0%}", file=sys.stderr)
-
+    for index, result in tqdm(enumerate(results), total=total):
       if result == 0:
         crashes += 1
       else:
