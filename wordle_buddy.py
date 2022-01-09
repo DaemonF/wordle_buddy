@@ -204,10 +204,10 @@ class WordList(list):
       if score == green_char:
         new_wordlist = [w for w in new_wordlist if w[index] == letter]
       elif score == yellow_char:
-        new_wordlist = [w for w in new_wordlist if w[index] != letter and occurrences(w, letter) >= occurrences(scored_guess.word, letter)]
+        yellow_green_count = sum(1 for index in range(word_length) if scored_guess.word[index] == letter and scored_guess.score[index] in (yellow_char, green_char))
+        new_wordlist = [w for w in new_wordlist if w[index] != letter and occurrences(w, letter) >= yellow_green_count]
       elif score == gray_char:
-        # TODO: Unless the char is yellow or green in word.
-        gray_count = sum(1 for index, score in enumerate(scored_guess.score) if score == gray_char and scored_guess.word[index] == letter)
+        gray_count = sum(1 for index in range(word_length) if scored_guess.word[index] == letter and scored_guess.score[index] == gray_char)
         new_wordlist = [w for w in new_wordlist if occurrences(w, letter) <= occurrences(scored_guess.word, letter) - gray_count]
       else:
         raise(f"Unknown score character: '{score}'.")
