@@ -6,6 +6,7 @@ import multiprocessing
 import os
 import sys
 from tqdm import tqdm
+from time import time
 
 
 # The word size for the game.
@@ -294,14 +295,18 @@ def regression_test(list, strategy, sampling):
   wins = [0 for x in range(20)]
   crashes = 0
 
-  with multiprocessing.Pool(os.cpu_count()) as pool:
-    results = pool.imap(functools.partial(_regression_test, list, strategy), answers)
+  start = time()
+  parallelism = os.cpu_count()
+  chunk_size = 5
+  with multiprocessing.Pool(parallelism) as pool:
+    results = pool.imap(functools.partial(_regression_test, list, strategy), answers, chunk_size)
 
     for index, result in tqdm(enumerate(results), total=total):
       if result == 0:
         crashes += 1
       else:
         wins[result - 1] += 1
+  stop = time()
 
   print(f"Regression test")
   print(f"  List: {len(list)} words")
@@ -315,6 +320,8 @@ def regression_test(list, strategy, sampling):
     def perc(n, d):
       return f"{n/d:.1%}"
     print(f"    {index+1:>3} {count:>4}  {perc(count, total):>6}  {perc(sum(wins[:index+1]), total):>6}")
+  print()
+  print(f"Total time: {stop - start:.3f} seconds (parallelism: {parallelism}, chunk size: {chunk_size}).")
 
 
 def main():
