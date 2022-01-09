@@ -52,7 +52,22 @@ class Guess:
     self.wordlist = wordlist
     self.word = word
 
-    self.score = [None for _ in range(word_length)]  # The actual result from Wordle.
+    self.score: list = None  # The actual result from the game.
+
+  def compute_score(self, answer):
+    answer = list(answer)
+    self.score = [gray_char for _ in range(word_length)]
+    for index, letter in enumerate(self.word):
+      if letter == answer[index]:
+        self.score[index] = green_char
+        answer[index] = None
+    for index, letter in enumerate(self.word):
+      if self.score[index] is gray_char and letter in answer:
+        self.score[index] = yellow_char
+        answer[answer.index(letter)] = None
+    for index, letter in enumerate(self.word):
+      if self.score[index] is None:
+        self.score[index] = gray_char
 
   def grade(self, strategy: Strategy):
     if strategy == Strategy.FREQ:
@@ -181,18 +196,21 @@ class WordList(list):
   def sublist(self, scored_guess):
     '''Returns a new WordList by removing all incompatible words from this wordlist.
     '''
+    if scored_guess.wordlist != self:
+      raise(f"Guess is not associated with this wordlist.")
     new_wordlist = self
     for index, letter in enumerate(scored_guess.word):
       score = scored_guess.score[index]
       if score == green_char:
         new_wordlist = [w for w in new_wordlist if w[index] == letter]
       elif score == yellow_char:
-        new_wordlist = [w for w in new_wordlist if w[index] != letter and letter in w]
+        new_wordlist = [w for w in new_wordlist if w[index] != letter and occurrences(w, letter) >= occurrences(scored_guess.word, letter)]
       elif score == gray_char:
         # TODO: Unless the char is yellow or green in word.
-        new_wordlist = [w for w in new_wordlist if letter not in w]
+        gray_count = sum(1 for index, score in enumerate(scored_guess.score) if score == gray_char and scored_guess.word[index] == letter)
+        new_wordlist = [w for w in new_wordlist if occurrences(w, letter) <= occurrences(scored_guess.word, letter) - gray_count]
       else:
-        throw(f"Unknown score character: '{score}'.")
+        raise(f"Unknown score character: '{score}'.")
     return WordList(new_wordlist)
 
 
@@ -278,19 +296,7 @@ def play_game_with_answer(wordlist, strategy, answer, quiet=False):
     return
 
   def scoring_func(guess):
-    remaining = list(answer)
-    guess.score = [gray_char for _ in range(word_length)]
-    for index, letter in enumerate(guess.word):
-      if letter == remaining[index]:
-        guess.score[index] = green_char
-        remaining[index] = None
-    for index, letter in enumerate(guess.word):
-      if guess.score[index] is gray_char and letter in remaining:
-        guess.score[index] = yellow_char
-        remaining[remaining.index(letter)] = None
-    for index, letter in enumerate(guess.word):
-      if guess.score[index] is None:
-        guess.score[index] = gray_char
+    guess.compute_score(answer)
     _print(f"Score: {''.join(guess.score)}")
     _print()
   return play_game(wordlist, strategy, scoring_func, quiet=quiet)
