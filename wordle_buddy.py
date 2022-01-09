@@ -255,7 +255,7 @@ def play_game(wordlist, strategy, scoring_func, quiet=False):
     if not quiet:
       print(*args)
 
-  _print(f"Strategy: {strategy}")
+  _print(f"Strategy: {strategy.value}")
   _print()
   tries = 0
   while True:
@@ -305,13 +305,13 @@ def _regression_test(wordlist, strategy, answer):
   try:
     return play_game_with_answer(wordlist, strategy, answer, quiet=True)
   except ZeroDivisionError:
-    return 0
+    return answer
 
 def regression_test(wordlist, strategy, sampling):
   answers = [word for index, word in enumerate(wordlist) if index % sampling == 0]
   total = len(answers)
   wins = [0 for _ in range(20)]
-  crashes = 0
+  crashes = []
 
   start = time()
   parallelism = os.cpu_count()
@@ -320,8 +320,8 @@ def regression_test(wordlist, strategy, sampling):
     results = pool.imap(partial(_regression_test, wordlist, strategy), answers, chunk_size)
 
     for index, result in tqdm(enumerate(results), total=total):
-      if result == 0:
-        crashes += 1
+      if type(result) is str:
+        crashes.append(result)
       else:
         wins[result - 1] += 1
   stop = time()
@@ -332,7 +332,10 @@ def regression_test(wordlist, strategy, sampling):
   print(f"  Strategy: {strategy.value}")
   print()
   print(f"Stats of {total} games:")
-  print(f"  Crashes: {crashes} {crashes / total:.2%}")
+  if len(crashes) > 0:
+    print(f"  Crashes: {len(crashes)} {len(crashes) / total:.2%}")
+    for crash in crashes:
+      print(f"    {crash}")
   print(f"  Wins:")
   for index, count in enumerate(wins):
     def perc(n, d):
