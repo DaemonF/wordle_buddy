@@ -197,77 +197,45 @@ class WordList(list):
 
 
 def show_stats_interactive(list):
-  if True:  # FIXME: de-indent
-    guesses = [Guess(list, word) for word in list]
+  guesses = [Guess(list, word) for word in list]
 
-    for strategy in Strategy:
-      print(f"By {strategy.description}:")
-      top = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)
-      for guess in top[:5]:
-        print(f"  {guess}")
-      print()
-
-    while True:
-      entry = input("Enter a letter or word: ")
-      if entry == "":
-        break
-      elif len(entry) == 1:
-        def fmt_stat(stat):
-          return f"{stat: >5.1%}"
-        def fmt_stats(list):
-          return ', '.join(fmt_stat(e) for e in list)
-
-        print(f"  Overall frequency: {fmt_stat(list.letter_freq[entry])}")
-        print(f"  Positional frequency:\n    {fmt_stats(list.letter_pos_freq[entry])}")
-        print()
-        print(f"  Positional chance of green:\n    {fmt_stats(list.green_chance[entry])}")
-        print(f"  Positional chance of yellow:\n    {fmt_stats(list.yellow_chance[entry])}")
-        print(f"  Positional chance of gray:\n    {fmt_stats(list.gray_chance[entry])}")
-        print()
-        print(f"  Distribution of count per word it appears in:\n    {fmt_stats(list.letter_dupe_chance[entry])}")
-      elif len(entry) == word_length:
-        print(f"  {Guess(list, entry)}")
-        if entry not in list:
-          print("  Note: Not in word list.")
-      else:
-        print(f"ERROR: Invalid length. Must be 1 or {word_length} characters.")
-      print()
-
-def play_game_interactive(list, strategy):
-  if True:  # FIXME: de-indent
-    print(f"Strategy: {strategy}")
+  for strategy in Strategy:
+    print(f"By {strategy.description}:")
+    top = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)
+    for guess in top[:5]:
+      print(f"  {guess}")
     print()
-    tries = 0
-    while True:
-      tries += 1
-      print(f"List has {len(list)} words: {', '.join(list[:3])}")
 
-      guesses = [Guess(list, word) for word in list]
-      guess = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)[0]
-      print(f"Try: {guess}")
+  while True:
+    entry = input("Enter a letter or word: ")
+    if entry == "":
+      break
+    elif len(entry) == 1:
+      def fmt_stat(stat):
+        return f"{stat: >5.1%}"
+      def fmt_stats(list):
+        return ', '.join(fmt_stat(e) for e in list)
 
-      while None in guess.score:
-        resp = input("What was the score? ")
-        if len(resp) == word_length:
-          for index, char in enumerate(resp):
-            guess.score[index] = char
+      print(f"  Overall frequency: {fmt_stat(list.letter_freq[entry])}")
+      print(f"  Positional frequency:\n    {fmt_stats(list.letter_pos_freq[entry])}")
       print()
+      print(f"  Positional chance of green:\n    {fmt_stats(list.green_chance[entry])}")
+      print(f"  Positional chance of yellow:\n    {fmt_stats(list.yellow_chance[entry])}")
+      print(f"  Positional chance of gray:\n    {fmt_stats(list.gray_chance[entry])}")
+      print()
+      print(f"  Distribution of count per word it appears in:\n    {fmt_stats(list.letter_dupe_chance[entry])}")
+    elif len(entry) == word_length:
+      print(f"  {Guess(list, entry)}")
+      if entry not in list:
+        print("  Note: Not in word list.")
+    else:
+      print(f"ERROR: Invalid length. Must be 1 or {word_length} characters.")
+    print()
 
-      if occurrences(guess.score, green_char) == word_length:
-        break
-
-      list = list.sublist(guess)
-
-    print(f"Got it in {tries}/6 tries.")
-
-def play_game_with_answer(list, strategy, answer, quiet=False):
+def play_game(list, strategy, scoring_func, quiet=False):
   def _print(*args):
     if not quiet:
       print(*args)
-
-  if answer not in list:
-    _print(f"'{answer}' is not in word list. Exiting...")
-    return
 
   _print(f"Strategy: {strategy}")
   _print()
@@ -280,17 +248,7 @@ def play_game_with_answer(list, strategy, answer, quiet=False):
     guess = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)[0]
     _print(f"Try: {guess}")
 
-    for index, letter in enumerate(guess.word):
-      if letter == answer[index]:
-        guess.score[index] = green_char
-      # TODO: Need to subtract greens or yellows elsewhere in the word ('rebus' with a guess of 'seres').
-      elif letter in answer and occurrences(answer, letter) > occurrences(guess.word[:index], letter):
-        guess.score[index] = yellow_char
-      else:
-        guess.score[index] = gray_char
-
-    _print(f"Score: {''.join(guess.score)}")
-    _print()
+    scoring_func(guess)
 
     if occurrences(guess.score, green_char) == word_length:
       break
@@ -299,6 +257,38 @@ def play_game_with_answer(list, strategy, answer, quiet=False):
 
   _print(f"Got it in {tries}/6 tries.")
   return tries
+
+def play_game_interactive(list, strategy):
+  def scoring_func(guess):
+    while None in guess.score:
+      resp = input("What was the score? ")
+      if len(resp) == word_length:
+        for index, char in enumerate(resp):
+          guess.score[index] = char
+    print()
+  return play_game(list, strategy, scoring_func)
+
+def play_game_with_answer(list, strategy, answer, quiet=False):
+  def _print(*args):
+    if not quiet:
+      print(*args)
+
+  if answer not in list:
+    _print(f"'{answer}' is not in word list. Exiting...")
+    return
+
+  def scoring_func(guess):
+    for index, letter in enumerate(guess.word):
+      if letter == answer[index]:
+        guess.score[index] = green_char
+      # TODO: Need to subtract greens or yellows elsewhere in the word ('rebus' with a guess of 'seres').
+      elif letter in answer and occurrences(answer, letter) > occurrences(guess.word[:index], letter):
+        guess.score[index] = yellow_char
+      else:
+        guess.score[index] = gray_char
+    _print(f"Score: {''.join(guess.score)}")
+    _print()
+  return play_game(list, strategy, scoring_func, quiet=quiet)
 
 def _regression_test(list, strategy, answer):
   try:
