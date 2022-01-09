@@ -52,7 +52,7 @@ class Guess:
     self.wordlist = wordlist
     self.word = word
 
-    self.score: list = None  # The actual result from the game.
+    self.score: list = [None for _ in range(word_length)]  # The actual result from the game.
 
   def compute_score(self, answer):
     answer = list(answer)
@@ -307,8 +307,10 @@ def _regression_test(wordlist, strategy, answer):
   except ZeroDivisionError:
     return answer
 
-def regression_test(wordlist, strategy, sampling):
-  answers = [word for index, word in enumerate(wordlist) if index % sampling == 0]
+def regression_test(wordlist, strategy, sampling, answerlist):
+  answers = answerlist
+  if answers is None:
+    answers = [word for index, word in enumerate(wordlist) if index % sampling == 0]
   total = len(answers)
   wins = [0 for _ in range(20)]
   crashes = []
@@ -328,7 +330,10 @@ def regression_test(wordlist, strategy, sampling):
 
   print(f"Regression test")
   print(f"  List: {len(wordlist)} words")
-  print(f"  Games: {len(answers)} answers (sampling: 1/{sampling})")
+  if answerlist is None:
+    print(f"  Games: {len(answers)} answers (sampling: 1/{sampling})")
+  else:
+    print(f"  Games: {len(answers)} answers")
   print(f"  Strategy: {strategy.value}")
   print()
   print(f"Stats of {total} games:")
@@ -356,18 +361,28 @@ def main():
   # Run a regression test.
   parser.add_argument('-t', dest='mode', action='store_const', const='test')
   parser.add_argument('--sampling', default=10, type=int)
+  parser.add_argument('--answer_file', default=None)
   args = parser.parse_args()
 
   raw_wordlist = []
   with open(args.dict_file, 'r') as f:
     for l in f.readlines():
       entry = l.strip()
-      if len(entry) == 5:
+      if len(entry) == word_length:
         raw_wordlist.append(entry)
   wordlist = WordList(raw_wordlist)
 
+  answerlist = None
+  if args.answer_file is not None:
+    answerlist = []
+    with open(args.answer_file, 'r') as f:
+      for l in f.readlines():
+        entry = l.strip()
+        if len(entry) == word_length:
+          answerlist.append(entry)
+
   if args.mode == 'test':
-    regression_test(wordlist, args.strategy, args.sampling)
+    regression_test(wordlist, args.strategy, args.sampling, answerlist)
   elif args.mode == 'interactive':
     play_game_interactive(wordlist, args.strategy)
   elif args.answer is not None:

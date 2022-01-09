@@ -1,0 +1,9 @@
+rebus
+boost
+truss
+siege
+tiger
+banal
+slump
+crank
+gorge
