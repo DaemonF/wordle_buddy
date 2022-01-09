@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
-import argparse
-import functools
 import multiprocessing
 import os
 import sys
-from tqdm import tqdm
+
+from argparse import ArgumentParser
+from enum import Enum
+from functools import cache, partial
 from time import time
+from tqdm import tqdm
 
 
 # The word size for the game.
@@ -19,6 +21,20 @@ gray_char = 'x'
 
 # Letters from 'a' to 'z', for convenience.
 letters = [chr(x) for x in range(ord('a'), ord('z') + 1)]
+
+# All strategies that can be used.
+class Strategy(Enum):
+  FREQ = 'freq', "positional letter frequency"
+  CLUES = 'clues', "potential clue value"
+  BIFUR = 'bifur', "maximum wordlist bifurcation"
+
+  def __new__(cls, *args, **kwds):
+        obj = object.__new__(cls)
+        obj._value_ = args[0]
+        return obj
+
+  def __init__(self, name, description):
+    self.description = description
 
 
 def occurrences(word, letter):
@@ -36,14 +52,17 @@ class Guess:
     self.wordlist = wordlist
     self.word = word
 
-    self.grades = {
-      'freq': self._grade_by_frequency(),
-      'clues': self._grade_by_potential_clues(),
-      'bifur': self._grade_by_bifurcation(),
-    }
-
     self.score = [None for x in range(word_length)]  # The actual result from Wordle.
 
+  def grade(self, strategy: Strategy):
+    if strategy == Strategy.FREQ:
+      return self._grade_by_frequency()
+    elif strategy == Strategy.CLUES:
+      return self._grade_by_potential_clues()
+    elif strategy == Strategy.BIFUR:
+      return self._grade_by_bifurcation()
+
+  @cache
   def _grade_by_frequency(self):
     '''Grades a guess base on positional letter frequency in the wordlist.
     '''
@@ -54,6 +73,7 @@ class Guess:
                ) / word_length
     return grade
 
+  @cache
   def _grade_by_potential_clues(self):
     '''Grades a guess by how many potential clues it could give based on the wordlist.
     '''
@@ -88,6 +108,7 @@ class Guess:
                ) / word_length
     return grade
 
+  @cache
   def _grade_by_bifurcation(self):
     '''Grades a guess based on how closely it would split the wordlist in equal halves.
     '''
@@ -103,7 +124,7 @@ class Guess:
       else sum(self.wordlist.letter_dupe_chance[letter][prev_dupes:]))
 
   def __str__(self):
-    stats = ', '.join(f"{k}: {fmt_stat(v)}" for k, v in self.grades.items())
+    stats = ', '.join(f"{strategy.value}: {fmt_stat(self.grade(strategy))}" for strategy in Strategy)
     return f"{self.word} ({stats})"
 
 
@@ -179,16 +200,12 @@ def show_stats_interactive(list):
   if True:  # FIXME: de-indent
     guesses = [Guess(list, word) for word in list]
 
-    def _print_top_guesses(guesses, title, strategy, limit=5):
-      print(title)
-      top = sorted(guesses, key=lambda x: x.grades[strategy], reverse=True)
-      for guess in top[:limit]:
+    for strategy in Strategy:
+      print(f"By {strategy.description}:")
+      top = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)
+      for guess in top[:5]:
         print(f"  {guess}")
       print()
-
-    _print_top_guesses(guesses, "By positional letter frequency:", 'freq')
-    _print_top_guesses(guesses, "By potential for clues:", 'clues')
-    _print_top_guesses(guesses, "By maximum wordlist bifurcation:", 'bifur')
 
     while True:
       entry = input("Enter a letter or word: ")
@@ -226,7 +243,7 @@ def play_game_interactive(list, strategy):
       print(f"List has {len(list)} words: {', '.join(list[:3])}")
 
       guesses = [Guess(list, word) for word in list]
-      guess = sorted(guesses, key=lambda x: x.grades[strategy], reverse=True)[0]
+      guess = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)[0]
       print(f"Try: {guess}")
 
       while None in guess.score:
@@ -260,7 +277,7 @@ def play_game_with_answer(list, strategy, answer, quiet=False):
     _print(f"List has {len(list)} words: {', '.join(list[:3])}")
 
     guesses = [Guess(list, word) for word in list]
-    guess = sorted(guesses, key=lambda x: x.grades[strategy], reverse=True)[0]
+    guess = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)[0]
     _print(f"Try: {guess}")
 
     for index, letter in enumerate(guess.word):
@@ -299,7 +316,7 @@ def regression_test(list, strategy, sampling):
   parallelism = os.cpu_count()
   chunk_size = 5
   with multiprocessing.Pool(parallelism) as pool:
-    results = pool.imap(functools.partial(_regression_test, list, strategy), answers, chunk_size)
+    results = pool.imap(partial(_regression_test, list, strategy), answers, chunk_size)
 
     for index, result in tqdm(enumerate(results), total=total):
       if result == 0:
@@ -311,7 +328,7 @@ def regression_test(list, strategy, sampling):
   print(f"Regression test")
   print(f"  List: {len(list)} words")
   print(f"  Games: {len(answers)} answers (sampling: 1/{sampling})")
-  print(f"  Strategy: {strategy}")
+  print(f"  Strategy: {strategy.value}")
   print()
   print(f"Stats of {total} games:")
   print(f"  Crashes: {crashes} {crashes / total:.2%}")
@@ -325,9 +342,9 @@ def regression_test(list, strategy, sampling):
 
 
 def main():
-  parser = argparse.ArgumentParser()
+  parser = ArgumentParser()
   parser.add_argument('--dict_file', default='sowpods.txt')
-  parser.add_argument('--strategy', default='freq')
+  parser.add_argument('--strategy', default='freq', type=Strategy)
   # Play game with known answer.
   parser.add_argument('--answer')
   # Play game interactively.
