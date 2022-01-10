@@ -38,7 +38,7 @@ class Strategy(Enum):
 
 
 def occurrences(word, letter):
-  return len(list(filter(lambda x: x == letter, word)))
+  return sum(1 for l in word if l == letter)
 
 def fmt_stat(stat):
   return f"{stat: >5.3f}"
@@ -141,7 +141,7 @@ class WordList(list):
           filter, index, letter, at_least_count)
       elif score[index] == gray_char:
         at_most_count = occurrences(guess, letter) - sum(1 for j in range(word_length) if guess[j] == letter and score[j] == gray_char)
-        filter = partial(lambda f,i,l,c,w: f(w) and 
+        filter = partial(lambda f,i,l,c,w: f(w) and
           w[i] != l and occurrences(w, l) <= c,
           filter, index, letter, at_most_count)
       else:
