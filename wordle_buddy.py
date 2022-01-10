@@ -56,15 +56,16 @@ class Guess:
 
   def compute_score(self, answer):
     answer = list(answer)
-    self.score = [gray_char for _ in range(word_length)]
-    for index, letter in enumerate(self.word):
-      if letter == answer[index]:
+    for index in range(word_length):
+      self.score[index] = gray_char
+    for index in range(word_length):
+      if self.word[index] == answer[index]:
         self.score[index] = green_char
         answer[index] = None
-    for index, letter in enumerate(self.word):
-      if self.score[index] is gray_char and letter in answer:
+    for index in range(word_length):
+      if self.word[index] in answer and self.score[index] == gray_char:
         self.score[index] = yellow_char
-        answer[answer.index(letter)] = None
+        answer[answer.index(self.word[index])] = None
 
   def grade(self, strategy: Strategy):
     if strategy == Strategy.FREQ:
