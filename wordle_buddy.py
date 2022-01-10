@@ -196,20 +196,27 @@ class WordList(list):
     '''
     if scored_guess.wordlist != self:
       raise(f"Guess is not associated with this wordlist.")
-    new_wordlist = self
-    for index, letter in enumerate(scored_guess.word):
-      score = scored_guess.score[index]
-      if score == green_char:
-        new_wordlist = [w for w in new_wordlist if w[index] == letter]
-      elif score == yellow_char:
-        yellow_green_count = sum(1 for index in range(word_length) if scored_guess.word[index] == letter and scored_guess.score[index] in (yellow_char, green_char))
-        new_wordlist = [w for w in new_wordlist if w[index] != letter and occurrences(w, letter) >= yellow_green_count]
-      elif score == gray_char:
-        gray_count = sum(1 for index in range(word_length) if scored_guess.word[index] == letter and scored_guess.score[index] == gray_char)
-        new_wordlist = [w for w in new_wordlist if occurrences(w, letter) <= occurrences(scored_guess.word, letter) - gray_count]
+    filter = lambda w: True
+    guess = scored_guess.word
+    score = scored_guess.score
+    for index, letter in enumerate(guess):
+      if score[index] == green_char:
+        filter = partial(lambda f,i,l,w: f(w) and
+          w[i] == l,
+          filter, index, letter)
+      elif score[index] == yellow_char:
+        at_least_count = sum(1 for j in range(word_length) if guess[j] == letter and score[j] in (yellow_char, green_char))
+        filter = partial(lambda f,i,l,c,w: f(w) and
+          w[i] != l and occurrences(w, l) >= c,
+          filter, index, letter, at_least_count)
+      elif score[index] == gray_char:
+        at_most_count = occurrences(guess, letter) - sum(1 for j in range(word_length) if guess[j] == letter and score[j] == gray_char)
+        filter = partial(lambda f,i,l,c,w: f(w) and 
+          w[i] != l and occurrences(w, l) <= c,
+          filter, index, letter, at_most_count)
       else:
         raise(f"Unknown score character: '{score}'.")
-    return WordList(new_wordlist)
+    return WordList([w for w in self if filter(w)])
 
 
 def show_stats_interactive(wordlist):
