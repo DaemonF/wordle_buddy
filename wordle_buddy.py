@@ -65,9 +65,6 @@ class Guess:
       if self.score[index] is gray_char and letter in answer:
         self.score[index] = yellow_char
         answer[answer.index(letter)] = None
-    for index, letter in enumerate(self.word):
-      if self.score[index] is None:
-        self.score[index] = gray_char
 
   def grade(self, strategy: Strategy):
     if strategy == Strategy.FREQ:
