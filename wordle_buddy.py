@@ -67,77 +67,8 @@ class Guess:
         self.score[index] = yellow_char
         answer[answer.index(self.word[index])] = None
 
-  def grade(self, strategy: Strategy):
-    if strategy == Strategy.FREQ:
-      return self._grade_by_frequency()
-    elif strategy == Strategy.CLUES:
-      return self._grade_by_potential_clues()
-    elif strategy == Strategy.BIFUR:
-      return self._grade_by_bifurcation()
-
-  @cache
-  def _grade_by_frequency(self):
-    '''Grades a guess base on positional letter frequency in the wordlist.
-    '''
-    grade = 0
-    for index, letter in enumerate(self.word):
-      grade += (self.wordlist.letter_pos_freq[letter][index]
-                * self._dupe_modifier(letter, index)
-               ) / word_length
-    return grade
-
-  @cache
-  def _grade_by_potential_clues(self):
-    '''Grades a guess by how many potential clues it could give based on the wordlist.
-    '''
-    debug = False
-    grade = 0
-    for index, letter in enumerate(self.word):
-      # The number of words that would make this guess green, yellow, or gray.
-      greens = self.wordlist.green_chance[letter][index]
-      yellows = self.wordlist.yellow_chance[letter][index]
-      grays = self.wordlist.gray_chance[letter][index]
-      if debug:
-        print(f"{self.word}[{index}]")
-        print(f"pre%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
-
-      # In Wordle, duplicate letters only count as yellow if the answer has the same or more duplicates. Model that.
-      yellows *= self._dupe_modifier(letter, index)
-      # Only the first gray for a given letter matters.
-      grays *= 0 if self._dupe_modifier(letter, index) < 1.0 else 1
-      if debug:
-        print(f"adj%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
-
-      # Weight each category by how much it would split up the wordlist.
-      green_weight = 1/2 - abs(1/2 - greens)
-      yellow_weight = 1/2 - abs(1/2 - yellows)
-      gray_weight = 1/2 - abs(1/2 - grays)
-      if debug:
-        print(f"weights: {fmt_stats([green_weight, yellow_weight, gray_weight])} (sum: {fmt_stat(green_weight + yellow_weight + gray_weight)})")
-
-      grade += (greens * green_weight
-                + yellows * yellow_weight
-                + grays * gray_weight
-               ) / word_length
-    return grade
-
-  @cache
-  def _grade_by_bifurcation(self):
-    '''Grades a guess based on how closely it would split the wordlist in equal halves.
-    '''
-    # TODO
-    return 0
-
-  def _dupe_modifier(self, letter, index):
-    '''If the Guess contains duplicate letters, discount later occurrences based on the dupe chance.
-    '''
-    # TODO: Need to handle greens, both before and after index and not penalize. (ie. green_chance == 1.0)
-    prev_dupes = occurrences(self.word[:index], letter)
-    return (1 if prev_dupes <= 0
-      else sum(self.wordlist.letter_dupe_chance[letter][prev_dupes:]))
-
   def __str__(self):
-    stats = ', '.join(f"{strategy.value}: {fmt_stat(self.grade(strategy))}" for strategy in Strategy)
+    stats = ', '.join(f"{strategy.value}: {fmt_stat(self.wordlist.grade(self.word, strategy))}" for strategy in Strategy)
     return f"{self.word} ({stats})"
 
 
@@ -218,14 +149,78 @@ class WordList(list):
         raise(f"Unknown score character: '{score}'.")
     return WordList([w for w in self if filter(w)])
 
+  def grade(self, word, strategy: Strategy):
+    if strategy == Strategy.FREQ:
+      return self._grade_by_frequency(word)
+    elif strategy == Strategy.CLUES:
+      return self._grade_by_potential_clues(word)
+    elif strategy == Strategy.BIFUR:
+      return self._grade_by_bifurcation(word)
+
+  def _grade_by_frequency(self, word):
+    '''Grades a guess base on positional letter frequency in the wordlist.
+    '''
+    grade = 0
+    for index, letter in enumerate(word):
+      grade += (self.letter_pos_freq[letter][index]
+                * self._dupe_modifier(word, letter, index)
+               ) / word_length
+    return grade
+
+  def _grade_by_potential_clues(self, word):
+    '''Grades a guess by how many potential clues it could give based on the wordlist.
+    '''
+    debug = False
+    grade = 0
+    for index, letter in enumerate(word):
+      # The number of words that would make this guess green, yellow, or gray.
+      greens = self.green_chance[letter][index]
+      yellows = self.yellow_chance[letter][index]
+      grays = self.gray_chance[letter][index]
+      if debug:
+        print(f"{word}[{index}]")
+        print(f"pre%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
+
+      dupe_mod = self._dupe_modifier(word, letter, index)
+      # In Wordle, duplicate letters only count as yellow if the answer has the same or more duplicates. Model that.
+      yellows *= dupe_mod
+      # Only the first gray for a given letter matters.
+      grays *= 0 if dupe_mod < 1.0 else 1
+      if debug:
+        print(f"adj%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
+
+      # Weight each category by how much it would split up the wordlist.
+      green_weight = 1/2 - abs(1/2 - greens)
+      yellow_weight = 1/2 - abs(1/2 - yellows)
+      gray_weight = 1/2 - abs(1/2 - grays)
+      if debug:
+        print(f"weights: {fmt_stats([green_weight, yellow_weight, gray_weight])} (sum: {fmt_stat(green_weight + yellow_weight + gray_weight)})")
+
+      grade += (greens * green_weight
+                + yellows * yellow_weight
+                + grays * gray_weight
+               ) / word_length
+    return grade
+
+  def _grade_by_bifurcation(self, word):
+    '''Grades a guess based on how closely it would split the wordlist in equal halves.
+    '''
+    # TODO
+    return 0
+
+  def _dupe_modifier(self, word, letter, index):
+    '''If the Guess contains duplicate letters, discount later occurrences based on the dupe chance.
+    '''
+    prev_dupes = occurrences(word[:index], letter)
+    return (1 if prev_dupes <= 0
+      else sum(self.letter_dupe_chance[letter][prev_dupes:]))
+
 
 def show_stats_interactive(wordlist):
-  guesses = [Guess(wordlist, word) for word in wordlist]
-
   for strategy in Strategy:
     print(f"By {strategy.description}:")
-    top = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)
-    for guess in top[:5]:
+    top = [Guess(wordlist, word) for word in sorted(wordlist, key=lambda word: wordlist.grade(word, strategy), reverse=True)[:5]]
+    for guess in top:
       print(f"  {guess}")
     print()
 
@@ -267,7 +262,7 @@ def play_game(wordlist, strategy, scoring_func, quiet=False):
     tries += 1
     _print(f"List has {len(wordlist)} words: {', '.join(wordlist[:3])}")
 
-    guess = max((Guess(wordlist, word) for word in wordlist), key=lambda g: g.grade(strategy))
+    guess = Guess(wordlist, max(wordlist, key=lambda word: wordlist.grade(word, strategy)))
     _print(f"Try: {guess}")
 
     scoring_func(guess)
