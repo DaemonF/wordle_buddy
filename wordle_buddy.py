@@ -267,8 +267,7 @@ def play_game(wordlist, strategy, scoring_func, quiet=False):
     tries += 1
     _print(f"List has {len(wordlist)} words: {', '.join(wordlist[:3])}")
 
-    guesses = [Guess(wordlist, word) for word in wordlist]
-    guess = sorted(guesses, key=lambda x: x.grade(strategy), reverse=True)[0]
+    guess = max((Guess(wordlist, word) for word in wordlist), key=lambda g: g.grade(strategy))
     _print(f"Try: {guess}")
 
     scoring_func(guess)
