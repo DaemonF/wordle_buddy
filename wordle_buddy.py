@@ -72,54 +72,53 @@ class Guess:
     return f"{self.word} ({stats})"
 
 
+class LetterStats():
+  def __init__(self):
+    self.green_chance = [0 for _ in range(word_length)]
+    self.yellow_chance = [0 for _ in range(word_length)]
+    self.gray_chance = [0 for _ in range(word_length)]
+    self.dupe_chance = [0 for _ in range(word_length)]
+
+  def freeze(self):
+    self.green_chance = tuple(self.green_chance)
+    self.yellow_chance = tuple(self.yellow_chance)
+    self.gray_chance = tuple(self.gray_chance)
+    self.dupe_chance = tuple(self.dupe_chance)
+
 class WordList(list):
   def __init__(self, wordlist):
     super(WordList, self).__init__(wordlist)
 
-    self.letter_freq = {letter:0 for letter in letters}
-    self.letter_pos_freq = {letter:[0 for _ in range(word_length)] for letter in letters}
-
-    self.green_chance = {letter:[0 for _ in range(word_length)] for letter in letters}
-    self.yellow_chance = {letter:[0 for _ in range(word_length)] for letter in letters}
-    self.gray_chance = {letter:[0 for _ in range(word_length)] for letter in letters}
-
-    self.letter_dupe_chance = {letter:[0 for _ in range(word_length)] for letter in letters}
+    self.stats = {letter:LetterStats() for letter in letters}
 
     for word in self:
+      # Track whether a given guess would be green, yellow, or gray for this word.
+      # TODO: This assumes all guesses are equally likely. Use wordlist?
       for index, letter in enumerate(word):
-        # Track how often the letter appears, and in this index.
-        self.letter_freq[letter] += 1
-        self.letter_pos_freq[letter][index] += 1
-
-        # Track whether a given guess would be green, yellow, or gray for this word.
-        # TODO: This assumes all guesses are equally likely. Use wordlist?
         for guess in letters:
+          stats = self.stats[guess]
           if guess == letter:
-            self.green_chance[guess][index] += 1
+            stats.green_chance[index] += 1
           elif guess in word:
-            self.yellow_chance[guess][index] += 1
+            stats.yellow_chance[index] += 1
           else:
-            self.gray_chance[guess][index] += 1
-
+            stats.gray_chance[index] += 1
       # Track how often letters appear within a word.
       for letter in set(word):
-        self.letter_dupe_chance[letter][occurrences(word, letter) - 1] += 1
+        self.stats[letter].dupe_chance[occurrences(word, letter) - 1] += 1
 
     # Normalize
     total_words = len(self)
     for letter in letters:
-      self.letter_freq[letter] /= total_words
-
-      total_occurrences = sum(self.letter_dupe_chance[letter])
+      stats = self.stats[letter]
+      total_occurrences = sum(stats.dupe_chance)
       for index in range(word_length):
-        self.letter_pos_freq[letter][index] /= total_words
-
-        self.green_chance[letter][index] /= total_words
-        self.yellow_chance[letter][index] /= total_words
-        self.gray_chance[letter][index] /= total_words
-
+        stats.green_chance[index] /= total_words
+        stats.yellow_chance[index] /= total_words
+        stats.gray_chance[index] /= total_words
         if total_occurrences > 0:
-          self.letter_dupe_chance[letter][index] /= total_occurrences
+          stats.dupe_chance[index] /= total_occurrences
+      stats.freeze()
 
 
   def sublist(self, scored_guess):
@@ -147,7 +146,7 @@ class WordList(list):
           filter, index, letter, at_most_count)
       else:
         raise(f"Unknown score character: '{score}'.")
-    return WordList([w for w in self if filter(w)])
+    return WordList(w for w in self if filter(w))
 
   def grade(self, word, strategy: Strategy):
     if strategy == Strategy.FREQ:
@@ -162,8 +161,9 @@ class WordList(list):
     '''
     grade = 0
     for index, letter in enumerate(word):
-      grade += (self.letter_pos_freq[letter][index]
-                * self._dupe_modifier(word, letter, index)
+      stats = self.stats[letter]
+      grade += (stats.green_chance[index]
+                * self._dupe_modifier(word, index, letter, stats)
                ) / word_length
     return grade
 
@@ -173,15 +173,16 @@ class WordList(list):
     debug = False
     grade = 0
     for index, letter in enumerate(word):
+      stats = self.stats[letter]
       # The number of words that would make this guess green, yellow, or gray.
-      greens = self.green_chance[letter][index]
-      yellows = self.yellow_chance[letter][index]
-      grays = self.gray_chance[letter][index]
+      greens = stats.green_chance[index]
+      yellows = stats.yellow_chance[index]
+      grays = stats.gray_chance[index]
       if debug:
         print(f"{word}[{index}]")
         print(f"pre%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
 
-      dupe_mod = self._dupe_modifier(word, letter, index)
+      dupe_mod = self._dupe_modifier(word, index, letter, stats)
       # In Wordle, duplicate letters only count as yellow if the answer has the same or more duplicates. Model that.
       yellows *= dupe_mod
       # Only the first gray for a given letter matters.
@@ -208,20 +209,19 @@ class WordList(list):
     # TODO
     return 0
 
-  def _dupe_modifier(self, word, letter, index):
+  def _dupe_modifier(self, word, index, letter, stats):
     '''If the Guess contains duplicate letters, discount later occurrences based on the dupe chance.
     '''
     prev_dupes = occurrences(word[:index], letter)
     return (1 if prev_dupes <= 0
-      else sum(self.letter_dupe_chance[letter][prev_dupes:]))
+      else sum(stats.dupe_chance[prev_dupes:]))
 
 
 def show_stats_interactive(wordlist):
   for strategy in Strategy:
     print(f"By {strategy.description}:")
-    top = [Guess(wordlist, word) for word in sorted(wordlist, key=lambda word: wordlist.grade(word, strategy), reverse=True)[:5]]
-    for guess in top:
-      print(f"  {guess}")
+    for guess in sorted(wordlist, key=lambda word: wordlist.grade(word, strategy), reverse=True)[:5]:
+      print(f"  {Guess(wordlist, guess)}")
     print()
 
   while True:
@@ -233,15 +233,15 @@ def show_stats_interactive(wordlist):
         return f"{stat: >5.1%}"
       def fmt_stats(stats):
         return ', '.join(fmt_stat(e) for e in stats)
+      stats = wordlist.stats[entry]
 
-      print(f"  Overall frequency: {fmt_stat(wordlist.letter_freq[entry])}")
-      print(f"  Positional frequency:\n    {fmt_stats(wordlist.letter_pos_freq[entry])}")
+      print(f"  Appears anywhere in word: {fmt_stat(sum(stats.green_chance))}")
       print()
-      print(f"  Positional chance of green:\n    {fmt_stats(wordlist.green_chance[entry])}")
-      print(f"  Positional chance of yellow:\n    {fmt_stats(wordlist.yellow_chance[entry])}")
-      print(f"  Positional chance of gray:\n    {fmt_stats(wordlist.gray_chance[entry])}")
+      print(f"  Positional chance of green:\n    {fmt_stats(stats.green_chance)}")
+      print(f"  Positional chance of yellow:\n    {fmt_stats(stats.yellow_chance)}")
+      print(f"  Positional chance of gray:\n    {fmt_stats(stats.gray_chance)}")
       print()
-      print(f"  Distribution of count per word it appears in:\n    {fmt_stats(wordlist.letter_dupe_chance[entry])}")
+      print(f"  Distribution of count per word it appears in:\n    {fmt_stats(stats.dupe_chance)}")
     elif len(entry) == word_length:
       print(f"  {Guess(wordlist, entry)}")
       if entry not in wordlist:

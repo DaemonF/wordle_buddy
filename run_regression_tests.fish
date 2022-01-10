@@ -13,5 +13,7 @@ for strat in {freq,clues}
       > regression_tests/$strat/full.txt
   end
 end
-cat regression_tests/*/sampling_10.txt \
-  | email_me 'Wordle buddy regression tests done.'
+if [ "$argv[1]" = '--full' ]
+  cat regression_tests/*/sampling_10.txt \
+    | email_me 'Wordle buddy regression tests done.'
+end
