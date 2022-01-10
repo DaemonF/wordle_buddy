@@ -212,9 +212,8 @@ class WordList(list):
   def _dupe_modifier(self, word, index, letter, stats):
     '''If the Guess contains duplicate letters, discount later occurrences based on the dupe chance.
     '''
-    prev_dupes = occurrences(word[:index], letter)
-    return (1 if prev_dupes <= 0
-      else sum(stats.dupe_chance[prev_dupes:]))
+    return (1 if word.index(letter) == index
+      else sum(stats.dupe_chance[occurrences(word[:index], letter):]))
 
 
 def show_stats_interactive(wordlist):
