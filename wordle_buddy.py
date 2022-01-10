@@ -182,11 +182,10 @@ class WordList(list):
         print(f"{word}[{index}]")
         print(f"pre%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
 
-      dupe_mod = self._dupe_modifier(word, index, letter, stats)
       # In Wordle, duplicate letters only count as yellow if the answer has the same or more duplicates. Model that.
-      yellows *= dupe_mod
+      yellows *= self._dupe_modifier(word, index, letter, stats)
       # Only the first gray for a given letter matters.
-      grays *= 0 if dupe_mod < 1.0 else 1
+      grays *= 1 if word.index(letter) == index else 0
       if debug:
         print(f"adj%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
 
