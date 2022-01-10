@@ -7,3 +7,4 @@ banal
 slump
 crank
 gorge
+query
