@@ -1,15 +1,15 @@
 Regression test
   List: 12478 words
-  Games: 10 answers
+  Games: 11 answers
   Strategy: clues
 
-Stats of 10 games:
+Stats of 11 games:
   Wins:
       1    0    0.0%    0.0%
       2    0    0.0%    0.0%
-      3    4   40.0%   40.0%
-      4    2   20.0%   60.0%
-      5    4   40.0%  100.0%
+      3    4   36.4%   36.4%
+      4    2   18.2%   54.5%
+      5    5   45.5%  100.0%
       6    0    0.0%  100.0%
       7    0    0.0%  100.0%
       8    0    0.0%  100.0%
@@ -26,4 +26,4 @@ Stats of 10 games:
      19    0    0.0%  100.0%
      20    0    0.0%  100.0%
 
-Total time: 0.398 seconds (parallelism: 6, chunk size: 5).
+Total time: 0.410 seconds (parallelism: 6, chunk size: 5).
