@@ -6,7 +6,7 @@ import sys
 
 from argparse import ArgumentParser
 from enum import Enum
-from functools import cache, partial
+from functools import partial
 from time import time
 from tqdm import tqdm
 
