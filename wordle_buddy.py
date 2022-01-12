@@ -322,7 +322,7 @@ def regression_test(wordlist, strategy, sampling, answerlist):
   start = time()
   parallelism = os.cpu_count()
   chunk_size = 5
-  with multiprocessing.Pool(parallelism, maxtasksperchild=25) as pool:
+  with multiprocessing.Pool(parallelism) as pool:
     results = pool.imap(RegressionTest(wordlist, strategy), answers, chunk_size)
 
     for index, result in tqdm(enumerate(results), total=total):
