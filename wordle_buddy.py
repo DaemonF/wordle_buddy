@@ -298,11 +298,18 @@ def play_game_with_answer(wordlist, strategy, answer, quiet=False):
     _print()
   return play_game(wordlist, strategy, scoring_func, quiet=quiet)
 
-def _regression_test(wordlist, strategy, answer):
-  try:
-    return play_game_with_answer(wordlist, strategy, answer, quiet=True)
-  except ZeroDivisionError:
-    return answer
+
+class RegressionTest:
+  def __init__(self, wordlist, strategy):
+    self.wordlist = wordlist
+    self.strategy = strategy
+
+  def __call__(self, answer):
+    try:
+      return play_game_with_answer(self.wordlist, self.strategy, answer, quiet=True)
+    except:
+      return answer
+
 
 def regression_test(wordlist, strategy, sampling, answerlist):
   answers = answerlist
@@ -316,7 +323,7 @@ def regression_test(wordlist, strategy, sampling, answerlist):
   parallelism = os.cpu_count()
   chunk_size = 5
   with multiprocessing.Pool(parallelism, maxtasksperchild=25) as pool:
-    results = pool.imap(partial(_regression_test, wordlist, strategy), answers, chunk_size)
+    results = pool.imap(RegressionTest(wordlist, strategy), answers, chunk_size)
 
     for index, result in tqdm(enumerate(results), total=total):
       if type(result) is str:
