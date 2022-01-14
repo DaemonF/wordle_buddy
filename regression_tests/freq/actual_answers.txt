@@ -1,16 +1,16 @@
 Regression test
   List: 12478 words
-  Games: 13 answers
+  Games: 14 answers
   Strategy: freq
 
-Stats of 13 games:
+Stats of 14 games:
   Wins:
       1    0    0.0%    0.0%
       2    0    0.0%    0.0%
-      3    4   30.8%   30.8%
-      4    6   46.2%   76.9%
-      5    2   15.4%   92.3%
-      6    1    7.7%  100.0%
+      3    4   28.6%   28.6%
+      4    6   42.9%   71.4%
+      5    3   21.4%   92.9%
+      6    1    7.1%  100.0%
       7    0    0.0%  100.0%
       8    0    0.0%  100.0%
       9    0    0.0%  100.0%
@@ -26,4 +26,4 @@ Stats of 13 games:
      19    0    0.0%  100.0%
      20    0    0.0%  100.0%
 
-Total time: 0.268 seconds (parallelism: 6, chunk size: 5).
+Total time: 0.264 seconds (parallelism: 6, chunk size: 5).
