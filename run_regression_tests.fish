@@ -1,6 +1,6 @@
 #!/usr/bin/env fish
 
-for strat in {freq,clues}
+for strat in {freq,clues,bifur}
   ./wordle_buddy.py --strategy=$strat -t \
     --answer_file=wordlists/wordle_answers.txt \
     > regression_tests/$strat/wordle_answers.txt
