@@ -174,7 +174,6 @@ class WordList(list):
   def _grade_by_potential_clues(self, word):
     '''Grades a guess by how many potential clues it could give based on the wordlist.
     '''
-    debug = False
     grade = 0
     for index, letter in enumerate(word):
       stats = self.stats[letter]
@@ -182,23 +181,16 @@ class WordList(list):
       greens = stats.green_chance[index]
       yellows = stats.yellow_chance[index]
       grays = stats.gray_chance[index]
-      if debug:
-        print(f"{word}[{index}]")
-        print(f"pre%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_real(greens + yellows + grays)})")
 
       # In Wordle, duplicate letters only count as yellow if the answer has the same or more duplicates. Model that.
       yellows *= self._dupe_modifier(word, index, letter, stats)
       # Only the first gray for a given letter matters.
       grays *= 1 if word.index(letter) == index else 0
-      if debug:
-        print(f"adj%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_real(greens + yellows + grays)})")
 
       # Weight each category by how much it would split up the wordlist.
       green_weight = 1/2 - abs(1/2 - greens)
       yellow_weight = 1/2 - abs(1/2 - yellows)
       gray_weight = 1/2 - abs(1/2 - grays)
-      if debug:
-        print(f"weights: {fmt_stats([green_weight, yellow_weight, gray_weight])} (sum: {fmt_real(green_weight + yellow_weight + gray_weight)})")
 
       grade += (greens * green_weight
                 + yellows * yellow_weight
