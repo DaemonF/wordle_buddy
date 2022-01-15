@@ -22,6 +22,20 @@ gray_char = 'x'
 # Letters from 'a' to 'z', for convenience.
 letters = [chr(ordinal) for ordinal in range(ord('a'), ord('z') + 1)]
 
+def occurrences(word, letter):
+  return sum(1 for l in word if l == letter)
+
+def fmt_real(stat):
+  return f"{stat: >5.3f}"
+def fmt_perc(stat):
+  return f"{stat: >5.1%}"
+
+def fmt_stats(items, fmt_item=fmt_perc):
+  return ', '.join(fmt_item(i) for i in items)
+def fmt_blocks(items, fmt_item=fmt_perc):
+  return f"[ {' ][ '.join(fmt_item(i) for i in items)} ]"
+
+
 # All strategies that can be used.
 class Strategy(Enum):
   FREQ = 'freq', "positional letter frequency"
@@ -35,16 +49,6 @@ class Strategy(Enum):
 
   def __init__(self, name, description):
     self.description = description
-
-
-def occurrences(word, letter):
-  return sum(1 for l in word if l == letter)
-
-def fmt_stat(stat):
-  return f"{stat: >5.3f}"
-
-def fmt_stats(stats):
-  return ', '.join(fmt_stat(e) for e in stats)
 
 
 class Guess:
@@ -68,7 +72,7 @@ class Guess:
         answer[answer.index(self.word[index])] = None
 
   def __str__(self):
-    stats = ', '.join(f"{strategy.value}: {fmt_stat(self.wordlist.grade(self.word, strategy))}" for strategy in Strategy)
+    stats = ', '.join(f"{strategy.value}: {fmt_real(self.wordlist.grade(self.word, strategy))}" for strategy in Strategy)
     return f"{self.word} ({stats})"
 
 
@@ -180,21 +184,21 @@ class WordList(list):
       grays = stats.gray_chance[index]
       if debug:
         print(f"{word}[{index}]")
-        print(f"pre%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
+        print(f"pre%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_real(greens + yellows + grays)})")
 
       # In Wordle, duplicate letters only count as yellow if the answer has the same or more duplicates. Model that.
       yellows *= self._dupe_modifier(word, index, letter, stats)
       # Only the first gray for a given letter matters.
       grays *= 1 if word.index(letter) == index else 0
       if debug:
-        print(f"adj%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_stat(greens + yellows + grays)})")
+        print(f"adj%: {fmt_stats([greens, yellows, grays])} (sum: {fmt_real(greens + yellows + grays)})")
 
       # Weight each category by how much it would split up the wordlist.
       green_weight = 1/2 - abs(1/2 - greens)
       yellow_weight = 1/2 - abs(1/2 - yellows)
       gray_weight = 1/2 - abs(1/2 - grays)
       if debug:
-        print(f"weights: {fmt_stats([green_weight, yellow_weight, gray_weight])} (sum: {fmt_stat(green_weight + yellow_weight + gray_weight)})")
+        print(f"weights: {fmt_stats([green_weight, yellow_weight, gray_weight])} (sum: {fmt_real(green_weight + yellow_weight + gray_weight)})")
 
       grade += (greens * green_weight
                 + yellows * yellow_weight
@@ -227,17 +231,13 @@ def show_stats_interactive(wordlist):
     if entry == "":
       break
     elif len(entry) == 1:
-      def fmt_stat(stat):
-        return f"{stat: >5.1%}"
-      def fmt_stats(stats):
-        return ', '.join(fmt_stat(e) for e in stats)
       stats = wordlist.stats[entry]
 
-      print(f"  Appears anywhere in word: {fmt_stat(sum(stats.green_chance))}")
+      print(f"  Appears anywhere in word: {fmt_perc(sum(stats.green_chance))}")
       print()
-      print(f"  Positional chance of green:\n    {fmt_stats(stats.green_chance)}")
-      print(f"  Positional chance of yellow:\n    {fmt_stats(stats.yellow_chance)}")
-      print(f"  Positional chance of gray:\n    {fmt_stats(stats.gray_chance)}")
+      print(f"  Positional chance of green:\n    {fmt_blocks(stats.green_chance)}")
+      print(f"  Positional chance of yellow:\n    {fmt_blocks(stats.yellow_chance)}")
+      print(f"  Positional chance of gray:\n    {fmt_blocks(stats.gray_chance)}")
       print()
       print(f"  Distribution of count per word it appears in:\n    {fmt_stats(stats.dupe_chance)}")
     elif len(entry) == word_length:
