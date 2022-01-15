@@ -356,7 +356,7 @@ def regression_test(wordlist, strategy, sampling, answerlist):
 
 def main():
   parser = ArgumentParser()
-  parser.add_argument('--dict_file', default='wordlists/sowpods.txt')
+  parser.add_argument('--dict_file', default='wordlists/wordle_valid_words.txt')
   parser.add_argument('--strategy', default='freq', type=Strategy)
   # Play game with known answer.
   parser.add_argument('--answer')

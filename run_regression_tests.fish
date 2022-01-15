@@ -2,8 +2,8 @@
 
 for strat in {freq,clues}
   ./wordle_buddy.py --strategy=$strat -t \
-    --answer_file=wordlists/actual_answers.txt \
-    > regression_tests/$strat/actual_answers.txt
+    --answer_file=wordlists/wordle_answers.txt \
+    > regression_tests/$strat/wordle_answers.txt
   ./wordle_buddy.py --strategy=$strat -t \
     --sampling=10 \
     > regression_tests/$strat/sampling_10.txt
