@@ -19,6 +19,13 @@ green_char = '!'
 yellow_char = '?'
 gray_char = 'x'
 
+# Conversion to emoji for official output format.
+score_char_to_emoji = {
+  green_char: '\U0001F7E9',
+  yellow_char: '\U0001F7E8',
+  gray_char: '\U00002B1B',
+}
+
 # Letters from 'a' to 'z', for convenience.
 letters = [chr(ordinal) for ordinal in range(ord('a'), ord('z') + 1)]
 
@@ -247,7 +254,7 @@ def show_stats_interactive(wordlist):
       print(f"ERROR: Invalid length. Must be 1 or {word_length} characters.")
     print()
 
-def play_game(wordlist, strategy, scoring_func, quiet=False):
+def play_game(wordlist, strategy, scoring_func, results=None, quiet=False):
   def _print(*args):
     if not quiet:
       print(*args)
@@ -263,6 +270,11 @@ def play_game(wordlist, strategy, scoring_func, quiet=False):
     _print(f"Try: {guess}")
 
     scoring_func(guess)
+    if results is not None:
+      results.append({
+        'score': guess.score,
+        'len_wordlist': len(wordlist)
+      })
 
     if occurrences(guess.score, green_char) == word_length:
       break
@@ -272,6 +284,22 @@ def play_game(wordlist, strategy, scoring_func, quiet=False):
   _print(f"Got it in {tries}/6 tries.")
   return tries
 
+def results_to_string_official(results):
+  def results_to_emoji(results):
+    return "\n".join(
+      " ".join((
+        "".join(score_char_to_emoji[c] for c in result['score']),
+        f"{result['len_wordlist']} word{'s' if result['len_wordlist'] > 1 else ''}"
+      )) for result in results
+    )
+  return "\n".join((
+    f"Wordle xxx {len(results)}/6*",
+    "",
+    results_to_emoji(results),
+    "",
+    "(Bot play on hard)"
+  ))
+
 def play_game_interactive(wordlist, strategy):
   def scoring_func(guess):
     while None in guess.score:
@@ -280,7 +308,12 @@ def play_game_interactive(wordlist, strategy):
         for index, char in enumerate(resp):
           guess.score[index] = char
     print()
-  return play_game(wordlist, strategy, scoring_func)
+  results = []
+  tries = play_game(wordlist, strategy, scoring_func, results=results)
+  print()
+  print()
+  print(results_to_string_official(results))
+  return tries
 
 def play_game_with_answer(wordlist, strategy, answer, quiet=False):
   def _print(*args):

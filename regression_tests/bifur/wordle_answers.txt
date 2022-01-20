@@ -26,4 +26,4 @@ Stats of 2315 games:
      19    0    0.0%  100.0%
      20    0    0.0%  100.0%
 
-Total time: 9.709 seconds (parallelism: 6, chunk size: 5).
+Total time: 9.587 seconds (parallelism: 6, chunk size: 5).
