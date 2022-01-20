@@ -5,6 +5,7 @@ import os
 import sys
 
 from argparse import ArgumentParser
+from datetime import date
 from enum import Enum
 from functools import partial
 from time import time
@@ -285,6 +286,8 @@ def play_game(wordlist, strategy, scoring_func, results=None, quiet=False):
   return tries
 
 def results_to_string_official(results):
+  def wordle_number():
+    return (date.today() - date(2021, 6, 19)).days
   def results_to_emoji(results):
     return "\n".join(
       " ".join((
@@ -293,7 +296,7 @@ def results_to_string_official(results):
       )) for result in results
     )
   return "\n".join((
-    f"Wordle xxx {len(results)}/6*",
+    f"Wordle {wordle_number()} {len(results)}/6*",
     "",
     results_to_emoji(results),
     "",
