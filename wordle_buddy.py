@@ -43,6 +43,23 @@ def fmt_stats(items, fmt_item=fmt_perc):
 def fmt_blocks(items, fmt_item=fmt_perc):
   return f"[ {' ][ '.join(fmt_item(i) for i in items)} ]"
 
+def fmt_results_emoji(results):
+  return "\n".join(
+    " ".join((
+      "".join(score_char_to_emoji[c] for c in result['score']),
+      f"{result['len_wordlist']} word{'s' if result['len_wordlist'] > 1 else ''}"
+    )) for result in results
+  )
+def fmt_results_official(results):
+  wordle_number = (date.today() - date(2021, 6, 19)).days
+  return "\n".join((
+    f"Wordle {wordle_number} {len(results)}/6*",
+    "",
+    fmt_results_emoji(results),
+    "",
+    "(Bot play on hard)"
+  ))
+
 
 # All strategies that can be used.
 class Strategy(Enum):
@@ -256,52 +273,34 @@ def show_stats_interactive(wordlist):
     print()
 
 def play_game(wordlist, strategy, scoring_func, results=None, quiet=False):
-  def _print(*args):
-    if not quiet:
-      print(*args)
+  if not quiet:
+    print(f"Strategy: {strategy.value}")
 
-  _print(f"Strategy: {strategy.value}")
-  _print()
-  tries = 0
+  results = []
   while True:
-    tries += 1
-    _print(f"List has {len(wordlist)} words: {', '.join(wordlist[:3])}")
+    if not quiet:
+      print()
+      print(f"List has {len(wordlist)} words: {', '.join(wordlist[:3])}")
 
     guess = Guess(wordlist, max(wordlist, key=lambda word: wordlist.grade(word, strategy)))
-    _print(f"Try: {guess}")
+    if not quiet:
+      print(f"Try: {guess}")
 
     scoring_func(guess)
-    if results is not None:
-      results.append({
-        'score': guess.score,
-        'len_wordlist': len(wordlist)
-      })
-
+    results.append({
+      'score': guess.score,
+      'len_wordlist': len(wordlist)
+    })
     if occurrences(guess.score, green_char) == word_length:
       break
 
     wordlist = wordlist.sublist(guess)
 
-  _print(f"Got it in {tries}/6 tries.")
-  return tries
-
-def results_to_string_official(results):
-  def wordle_number():
-    return (date.today() - date(2021, 6, 19)).days
-  def results_to_emoji(results):
-    return "\n".join(
-      " ".join((
-        "".join(score_char_to_emoji[c] for c in result['score']),
-        f"{result['len_wordlist']} word{'s' if result['len_wordlist'] > 1 else ''}"
-      )) for result in results
-    )
-  return "\n".join((
-    f"Wordle {wordle_number()} {len(results)}/6*",
-    "",
-    results_to_emoji(results),
-    "",
-    "(Bot play on hard)"
-  ))
+  if not quiet:
+    print()
+    print()
+    print(fmt_results_official(results))
+  return results
 
 def play_game_interactive(wordlist, strategy):
   def scoring_func(guess):
@@ -310,27 +309,18 @@ def play_game_interactive(wordlist, strategy):
       if len(resp) == word_length:
         for index, char in enumerate(resp):
           guess.score[index] = char
-    print()
-  results = []
-  tries = play_game(wordlist, strategy, scoring_func, results=results)
-  print()
-  print()
-  print(results_to_string_official(results))
-  return tries
+  return play_game(wordlist, strategy, scoring_func)
 
 def play_game_with_answer(wordlist, strategy, answer, quiet=False):
-  def _print(*args):
-    if not quiet:
-      print(*args)
-
   if answer not in wordlist:
-    _print(f"'{answer}' is not in wordlist. Exiting...")
+    if not quiet:
+      print(f"'{answer}' is not in wordlist. Exiting...")
     return
 
   def scoring_func(guess):
     guess.compute_score(answer)
-    _print(f"Score: {''.join(guess.score)}")
-    _print()
+    if not quiet:
+      print(f"Score: {''.join(guess.score)}")
   return play_game(wordlist, strategy, scoring_func, quiet=quiet)
 
 
@@ -358,13 +348,13 @@ def regression_test(wordlist, strategy, sampling, answerlist):
   parallelism = os.cpu_count()
   chunk_size = 5
   with multiprocessing.Pool(parallelism) as pool:
-    results = pool.imap(RegressionTest(wordlist, strategy), answers, chunk_size)
+    all_results = pool.imap(RegressionTest(wordlist, strategy), answers, chunk_size)
 
-    for index, result in tqdm(enumerate(results), total=total):
-      if type(result) is str:
-        crashes.append(result)
+    for index, results in tqdm(enumerate(all_results), total=total):
+      if type(results) is str:
+        crashes.append(results)
       else:
-        wins[result - 1] += 1
+        wins[len(results) - 1] += 1
   stop = time()
 
   print(f"Regression test")
