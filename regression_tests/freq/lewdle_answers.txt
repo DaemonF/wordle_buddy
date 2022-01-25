@@ -1,18 +1,18 @@
 Regression test
-  List: 2315 words
-  Games: 2315 answers
+  List: 92 words
+  Games: 92 answers
   Strategy: freq
 
-Stats of 2315 games:
+Stats of 92 games:
   Wins:
-      1    1    0.0%    0.0%
-      2  146    6.3%    6.3%
-      3  906   39.1%   45.5%
-      4  974   42.1%   87.6%
-      5  230    9.9%   97.5%
-      6   44    1.9%   99.4%
-      7   12    0.5%   99.9%
-      8    2    0.1%  100.0%
+      1    1    1.1%    1.1%
+      2   35   38.0%   39.1%
+      3   48   52.2%   91.3%
+      4    8    8.7%  100.0%
+      5    0    0.0%  100.0%
+      6    0    0.0%  100.0%
+      7    0    0.0%  100.0%
+      8    0    0.0%  100.0%
       9    0    0.0%  100.0%
      10    0    0.0%  100.0%
      11    0    0.0%  100.0%
@@ -26,4 +26,4 @@ Stats of 2315 games:
      19    0    0.0%  100.0%
      20    0    0.0%  100.0%
 
-Total time: 4.011 seconds (parallelism: 6, chunk size: 5).
+Total time: 0.024 seconds (parallelism: 6, chunk size: 5).
