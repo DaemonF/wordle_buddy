@@ -1,6 +1,6 @@
 Regression test
   List: 92 words
-  Games: 92 answers
+  Games: 92 games of Lewdle
   Strategy: bifur
 
 Stats of 92 games:

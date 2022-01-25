@@ -1,6 +1,6 @@
 Regression test
   List: 2315 words
-  Games: 2315 answers
+  Games: 2315 games of Wordle
   Strategy: freq
 
 Stats of 2315 games:
@@ -26,4 +26,4 @@ Stats of 2315 games:
      19    0    0.0%  100.0%
      20    0    0.0%  100.0%
 
-Total time: 4.011 seconds (parallelism: 6, chunk size: 5).
+Total time: 4.128 seconds (parallelism: 6, chunk size: 5).

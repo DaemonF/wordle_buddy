@@ -12,9 +12,6 @@ from time import time
 from tqdm import tqdm
 
 
-# The word size for the game.
-word_length = 5
-
 # Characters used to display the score.
 green_char = '!'
 yellow_char = '?'
@@ -43,55 +40,77 @@ def fmt_stats(items, fmt_item=fmt_perc):
 def fmt_blocks(items, fmt_item=fmt_perc):
   return f"[ {' ][ '.join(fmt_item(i) for i in items)} ]"
 
-def fmt_results_emoji(results):
-  return "\n".join(
-    " ".join((
-      "".join(score_char_to_emoji[c] for c in result['score']),
-      f"{result['len_wordlist']} word{'s' if result['len_wordlist'] > 1 else ''}"
-    )) for result in results
-  )
-def fmt_results_official(results):
-  wordle_number = (date.today() - date(2021, 6, 19)).days
-  return "\n".join((
-    f"Wordle {wordle_number} {len(results)}/6*",
-    "",
-    fmt_results_emoji(results),
-    "",
-    "(Bot play on hard)"
-  ))
 
-
-# All strategies that can be used.
-class Strategy(Enum):
-  FREQ = 'freq', "positional letter frequency"
-  CLUES = 'clues', "potential clue value"
-  BIFUR = 'bifur', "maximum wordlist bifurcation"
-
+class PropEnum(Enum):
+  """Enum that allows properties that don't affect the enum identity."""
   def __new__(cls, *args, **kwds):
         obj = object.__new__(cls)
         obj._value_ = args[0]
         return obj
+
+
+class Game(PropEnum):
+  """All games that can be played."""
+
+  WORDLE = 'wordle', 'Wordle', 'wordlists/wordle_answers.txt', 5, 6, date(2021, 6, 19), '*', ' on hard'
+  LEWDLE = 'lewdle', 'Lewdle', 'wordlists/lewdle_answers.txt', 5, 6, date(2022, 1, 18), '', ''
+
+  def __init__(self, name, display_name, default_dict_file, word_length, max_tries, epoch, mode_symbol, mode_desc):
+    self.display_name = display_name
+    self.default_dict_file = default_dict_file
+    self.word_length = word_length
+    self.max_tries = max_tries
+    self.epoch = epoch
+    self.mode_symbol = mode_symbol
+    self.mode_desc = mode_desc
+
+  def fmt_results(self, results):
+    number = (date.today() - self.epoch).days
+    return "\n".join((
+      f"{self.display_name} {number} {len(results)}/{self.max_tries}{self.mode_symbol}",
+      "",
+      self._fmt_results_emoji(results),
+      "",
+      f"(Bot play{self.mode_desc})"
+    ))
+
+  def _fmt_results_emoji(self, results):
+    return "\n".join(
+      " ".join((
+        "".join(score_char_to_emoji[c] for c in result['score']),
+        f"{result['len_wordlist']} word{'s' if result['len_wordlist'] > 1 else ''}"
+      )) for result in results
+    )
+
+
+class Strategy(PropEnum):
+  """All strategies that can be used."""
+
+  FREQ = 'freq', "positional letter frequency"
+  CLUES = 'clues', "potential clue value"
+  BIFUR = 'bifur', "maximum wordlist bifurcation"
 
   def __init__(self, name, description):
     self.description = description
 
 
 class Guess:
-  def __init__(self, wordlist, word):
+  def __init__(self, game, wordlist, word):
+    self.game = game
     self.wordlist = wordlist
     self.word = word
 
-    self.score: list = [None for _ in range(word_length)]  # The actual result from the game.
+    self.score: list = [None for _ in range(self.game.word_length)]  # The actual result from the game.
 
   def compute_score(self, answer):
     answer = list(answer)
-    for index in range(word_length):
+    for index in range(self.game.word_length):
       self.score[index] = gray_char
-    for index in range(word_length):
+    for index in range(self.game.word_length):
       if self.word[index] == answer[index]:
         self.score[index] = green_char
         answer[index] = None
-    for index in range(word_length):
+    for index in range(self.game.word_length):
       if self.word[index] in answer and self.score[index] == gray_char:
         self.score[index] = yellow_char
         answer[answer.index(self.word[index])] = None
@@ -102,11 +121,11 @@ class Guess:
 
 
 class LetterStats():
-  def __init__(self):
-    self.green_chance = [0 for _ in range(word_length)]
-    self.yellow_chance = [0 for _ in range(word_length)]
-    self.gray_chance = [0 for _ in range(word_length)]
-    self.dupe_chance = [0 for _ in range(word_length)]
+  def __init__(self, game):
+    self.green_chance = [0 for _ in range(game.word_length)]
+    self.yellow_chance = [0 for _ in range(game.word_length)]
+    self.gray_chance = [0 for _ in range(game.word_length)]
+    self.dupe_chance = [0 for _ in range(game.word_length)]
 
   def freeze(self):
     self.green_chance = tuple(self.green_chance)
@@ -115,10 +134,11 @@ class LetterStats():
     self.dupe_chance = tuple(self.dupe_chance)
 
 class WordList(list):
-  def __init__(self, wordlist):
+  def __init__(self, game, wordlist):
     super(WordList, self).__init__(wordlist)
 
-    self.stats = {letter:LetterStats() for letter in letters}
+    self.game = game
+    self.stats = {letter:LetterStats(self.game) for letter in letters}
 
     for word in self:
       # Track whether a given guess would be green, yellow, or gray for this word.
@@ -141,7 +161,7 @@ class WordList(list):
     for letter in letters:
       stats = self.stats[letter]
       total_occurrences = sum(stats.dupe_chance)
-      for index in range(word_length):
+      for index in range(self.game.word_length):
         stats.green_chance[index] /= total_words
         stats.yellow_chance[index] /= total_words
         stats.gray_chance[index] /= total_words
@@ -164,18 +184,18 @@ class WordList(list):
           w[i] == l,
           filter, index, letter)
       elif score[index] == yellow_char:
-        at_least_count = sum(1 for j in range(word_length) if guess[j] == letter and score[j] in (yellow_char, green_char))
+        at_least_count = sum(1 for j in range(self.game.word_length) if guess[j] == letter and score[j] in (yellow_char, green_char))
         filter = partial(lambda f,i,l,c,w: f(w) and
           w[i] != l and occurrences(w, l) >= c,
           filter, index, letter, at_least_count)
       elif score[index] == gray_char:
-        at_most_count = occurrences(guess, letter) - sum(1 for j in range(word_length) if guess[j] == letter and score[j] == gray_char)
+        at_most_count = occurrences(guess, letter) - sum(1 for j in range(self.game.word_length) if guess[j] == letter and score[j] == gray_char)
         filter = partial(lambda f,i,l,c,w: f(w) and
           w[i] != l and occurrences(w, l) <= c,
           filter, index, letter, at_most_count)
       else:
         raise ValueError(f"Unknown score character: '{score[index]}'.")
-    return WordList(w for w in self if filter(w))
+    return WordList(self.game, (w for w in self if filter(w)))
 
   def grade(self, word, strategy: Strategy):
     if strategy == Strategy.FREQ:
@@ -193,7 +213,7 @@ class WordList(list):
       stats = self.stats[letter]
       grade += (stats.green_chance[index]
                 * self._dupe_modifier(word, index, letter, stats)
-               ) / word_length
+               ) / self.game.word_length
     return grade
 
   def _grade_by_potential_clues(self, word):
@@ -220,7 +240,7 @@ class WordList(list):
       grade += (greens * green_weight
                 + yellows * yellow_weight
                 + grays * gray_weight
-               ) / word_length
+               ) / self.game.word_length
     return grade
 
   def _grade_by_bifurcation(self, word):
@@ -243,11 +263,11 @@ class WordList(list):
       else sum(stats.dupe_chance[occurrences(word[:index], letter):]))
 
 
-def show_stats_interactive(wordlist):
+def show_stats_interactive(game, wordlist):
   for strategy in Strategy:
     print(f"By {strategy.description}:")
     for guess in sorted(wordlist, key=lambda word: wordlist.grade(word, strategy), reverse=True)[:5]:
-      print(f"  {Guess(wordlist, guess)}")
+      print(f"  {Guess(game, wordlist, guess)}")
     print()
 
   while True:
@@ -264,15 +284,15 @@ def show_stats_interactive(wordlist):
       print(f"  Positional chance of gray:\n    {fmt_blocks(stats.gray_chance)}")
       print()
       print(f"  Distribution of count per word it appears in:\n    {fmt_stats(stats.dupe_chance)}")
-    elif len(entry) == word_length:
-      print(f"  {Guess(wordlist, entry)}")
+    elif len(entry) == game.word_length:
+      print(f"  {Guess(game, wordlist, entry)}")
       if entry not in wordlist:
         print("  Note: Not in wordlist.")
     else:
-      print(f"ERROR: Invalid length. Must be 1 or {word_length} characters.")
+      print(f"ERROR: Invalid length. Must be 1 or {game.word_length} characters.")
     print()
 
-def play_game(wordlist, strategy, scoring_func, results=None, quiet=False):
+def play_game(game, wordlist, strategy, scoring_func, results=None, quiet=False):
   if not quiet:
     print(f"Strategy: {strategy.value}")
 
@@ -282,7 +302,7 @@ def play_game(wordlist, strategy, scoring_func, results=None, quiet=False):
       print()
       print(f"List has {len(wordlist)} words: {', '.join(wordlist[:3])}")
 
-    guess = Guess(wordlist, max(wordlist, key=lambda word: wordlist.grade(word, strategy)))
+    guess = Guess(game, wordlist, max(wordlist, key=lambda word: wordlist.grade(word, strategy)))
     if not quiet:
       print(f"Try: {guess}")
 
@@ -291,7 +311,7 @@ def play_game(wordlist, strategy, scoring_func, results=None, quiet=False):
       'score': guess.score,
       'len_wordlist': len(wordlist)
     })
-    if occurrences(guess.score, green_char) == word_length:
+    if occurrences(guess.score, green_char) == game.word_length:
       break
 
     wordlist = wordlist.sublist(guess)
@@ -299,19 +319,19 @@ def play_game(wordlist, strategy, scoring_func, results=None, quiet=False):
   if not quiet:
     print()
     print()
-    print(fmt_results_official(results))
+    print(game.fmt_results(results))
   return results
 
-def play_game_interactive(wordlist, strategy):
+def play_game_interactive(game, wordlist, strategy):
   def scoring_func(guess):
     while None in guess.score:
       resp = input("What was the score? ")
-      if len(resp) == word_length:
+      if len(resp) == game.word_length:
         for index, char in enumerate(resp):
           guess.score[index] = char
-  return play_game(wordlist, strategy, scoring_func)
+  return play_game(game, wordlist, strategy, scoring_func)
 
-def play_game_with_answer(wordlist, strategy, answer, quiet=False):
+def play_game_with_answer(game, wordlist, strategy, answer, quiet=False):
   if answer not in wordlist:
     if not quiet:
       print(f"'{answer}' is not in wordlist. Exiting...")
@@ -321,22 +341,23 @@ def play_game_with_answer(wordlist, strategy, answer, quiet=False):
     guess.compute_score(answer)
     if not quiet:
       print(f"Score: {''.join(guess.score)}")
-  return play_game(wordlist, strategy, scoring_func, quiet=quiet)
+  return play_game(game, wordlist, strategy, scoring_func, quiet=quiet)
 
 
 class RegressionTest:
-  def __init__(self, wordlist, strategy):
+  def __init__(self, game, wordlist, strategy):
+    self.game = game
     self.wordlist = wordlist
     self.strategy = strategy
 
   def __call__(self, answer):
     try:
-      return play_game_with_answer(self.wordlist, self.strategy, answer, quiet=True)
+      return play_game_with_answer(self.game, self.wordlist, self.strategy, answer, quiet=True)
     except:
       return answer
 
 
-def regression_test(wordlist, strategy, sampling, answerlist):
+def regression_test(game, wordlist, strategy, sampling, answerlist):
   if answerlist is None:
     answerlist = wordlist
   if sampling != 1:
@@ -350,7 +371,7 @@ def regression_test(wordlist, strategy, sampling, answerlist):
   parallelism = os.cpu_count()
   chunk_size = 5
   with multiprocessing.Pool(parallelism) as pool:
-    all_results = pool.imap(RegressionTest(wordlist, strategy), answerlist, chunk_size)
+    all_results = pool.imap(RegressionTest(game, wordlist, strategy), answerlist, chunk_size)
 
     for index, results in tqdm(enumerate(all_results), total=games):
       if type(results) is str:
@@ -361,7 +382,7 @@ def regression_test(wordlist, strategy, sampling, answerlist):
 
   print(f"Regression test")
   print(f"  List: {len(wordlist)} words")
-  print(f"  Games: {games} answers{'' if sampling == 1 else f' (sampling: 1/{sampling})'}")
+  print(f"  Games: {games} games of {game.display_name}{'' if sampling == 1 else f' (sampling: 1/{sampling})'}")
   print(f"  Strategy: {strategy.value}")
   print()
   print(f"Stats of {games} games:")
@@ -380,8 +401,9 @@ def regression_test(wordlist, strategy, sampling, answerlist):
 
 def main():
   parser = ArgumentParser()
-  parser.add_argument('--dict_file', default='wordlists/wordle_answers.txt')
+  parser.add_argument('--game', default='wordle', type=Game)
   parser.add_argument('--strategy', default='freq', type=Strategy)
+  parser.add_argument('--dict_file', default=None)
   # Play game with known answer.
   parser.add_argument('--answer')
   # Play game interactively.
@@ -392,13 +414,11 @@ def main():
   parser.add_argument('--answer_file', default=None)
   args = parser.parse_args()
 
-  raw_wordlist = []
-  with open(args.dict_file, 'r') as f:
-    for l in f.readlines():
-      entry = l.strip()
-      if len(entry) == word_length:
-        raw_wordlist.append(entry)
-  wordlist = WordList(raw_wordlist)
+  game = args.game
+  dict_file = args.dict_file if args.dict_file is not None else game.default_dict_file
+  wordlist = None
+  with open(dict_file, 'r') as f:
+    wordlist = WordList(game, (entry.strip() for entry in f.readlines() if len(entry.strip()) == game.word_length))
 
   answerlist = None
   if args.answer_file is not None:
@@ -406,15 +426,15 @@ def main():
     with open(args.answer_file, 'r') as f:
       for l in f.readlines():
         entry = l.strip()
-        if len(entry) == word_length:
+        if len(entry) == game.word_length:
           answerlist.append(entry)
 
   if args.mode == 'test':
-    regression_test(wordlist, args.strategy, args.sampling, answerlist)
+    regression_test(game, wordlist, args.strategy, args.sampling, answerlist)
   elif args.mode == 'interactive':
-    play_game_interactive(wordlist, args.strategy)
+    play_game_interactive(game, wordlist, args.strategy)
   elif args.answer is not None:
-    play_game_with_answer(wordlist, args.strategy, args.answer)
+    play_game_with_answer(game, wordlist, args.strategy, args.answer)
   else:
     print("Showing wordlist and starting-word stats...")
     print()

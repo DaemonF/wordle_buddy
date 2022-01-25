@@ -1,6 +1,6 @@
 Regression test
   List: 92 words
-  Games: 92 answers
+  Games: 92 games of Lewdle
   Strategy: clues
 
 Stats of 92 games:
@@ -26,4 +26,4 @@ Stats of 92 games:
      19    0    0.0%  100.0%
      20    0    0.0%  100.0%
 
-Total time: 0.033 seconds (parallelism: 6, chunk size: 5).
+Total time: 0.029 seconds (parallelism: 6, chunk size: 5).
