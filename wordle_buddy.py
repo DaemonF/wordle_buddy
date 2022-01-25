@@ -5,7 +5,7 @@ import os
 import sys
 
 from argparse import ArgumentParser
-from datetime import date
+from datetime import datetime
 from enum import Enum
 from functools import partial
 from time import time
@@ -52,8 +52,14 @@ class PropEnum(Enum):
 class Game(PropEnum):
   """All games that can be played."""
 
-  WORDLE = 'wordle', 'Wordle', 'wordlists/wordle_answers.txt', 5, 6, date(2021, 6, 19), '*', ' on hard'
-  LEWDLE = 'lewdle', 'Lewdle', 'wordlists/lewdle_answers.txt', 5, 6, date(2022, 1, 18), '', ''
+  WORDLE = (
+    'wordle', 'Wordle', 'wordlists/wordle_answers.txt',
+    5, 6, datetime(2021, 6, 19),
+    '*', ' on hard')
+  LEWDLE = (
+    'lewdle', 'Lewdle', 'wordlists/lewdle_answers.txt',
+    5, 6, datetime(2022, 1, 17, hour=21),
+    '', '')
 
   def __init__(self, name, display_name, default_dict_file, word_length, max_tries, epoch, mode_symbol, mode_desc):
     self.display_name = display_name
@@ -65,7 +71,7 @@ class Game(PropEnum):
     self.mode_desc = mode_desc
 
   def fmt_results(self, results):
-    number = (date.today() - self.epoch).days
+    number = (datetime.now() - self.epoch).days
     return "\n".join((
       f"{self.display_name} {number} {len(results)}/{self.max_tries}{self.mode_symbol}",
       "",
