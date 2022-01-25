@@ -154,7 +154,7 @@ class WordList(list):
     '''Returns a new WordList by removing all incompatible words from this wordlist.
     '''
     if scored_guess.wordlist != self:
-      raise(f"Guess is not associated with this wordlist.")
+      raise ValueError(f"Guess is not associated with this wordlist.")
     filter = lambda w: True
     guess = scored_guess.word
     score = scored_guess.score
@@ -174,7 +174,7 @@ class WordList(list):
           w[i] != l and occurrences(w, l) <= c,
           filter, index, letter, at_most_count)
       else:
-        raise(f"Unknown score character: '{score}'.")
+        raise ValueError(f"Unknown score character: '{score[index]}'.")
     return WordList(w for w in self if filter(w))
 
   def grade(self, word, strategy: Strategy):
