@@ -337,10 +337,12 @@ class RegressionTest:
 
 
 def regression_test(wordlist, strategy, sampling, answerlist):
-  answers = answerlist
-  if answers is None:
-    answers = [word for index, word in enumerate(wordlist) if index % sampling == 0]
-  total = len(answers)
+  if answerlist is None:
+    answerlist = wordlist
+  if sampling != 1:
+    answerlist = [answer for index, answer in enumerate(answerlist) if index % sampling == 0]
+
+  games = len(answerlist)
   wins = [0 for _ in range(20)]
   crashes = []
 
@@ -348,9 +350,9 @@ def regression_test(wordlist, strategy, sampling, answerlist):
   parallelism = os.cpu_count()
   chunk_size = 5
   with multiprocessing.Pool(parallelism) as pool:
-    all_results = pool.imap(RegressionTest(wordlist, strategy), answers, chunk_size)
+    all_results = pool.imap(RegressionTest(wordlist, strategy), answerlist, chunk_size)
 
-    for index, results in tqdm(enumerate(all_results), total=total):
+    for index, results in tqdm(enumerate(all_results), total=games):
       if type(results) is str:
         crashes.append(results)
       else:
@@ -359,22 +361,19 @@ def regression_test(wordlist, strategy, sampling, answerlist):
 
   print(f"Regression test")
   print(f"  List: {len(wordlist)} words")
-  if answerlist is None:
-    print(f"  Games: {len(answers)} answers (sampling: 1/{sampling})")
-  else:
-    print(f"  Games: {len(answers)} answers")
+  print(f"  Games: {games} answers{'' if sampling == 1 else f' (sampling: 1/{sampling})'}")
   print(f"  Strategy: {strategy.value}")
   print()
-  print(f"Stats of {total} games:")
+  print(f"Stats of {games} games:")
   if len(crashes) > 0:
-    print(f"  Crashes: {len(crashes)} {len(crashes) / total:.2%}")
+    print(f"  Crashes: {len(crashes)} {len(crashes) / games:.2%}")
     for crash in crashes:
       print(f"    {crash}")
   print(f"  Wins:")
   for index, count in enumerate(wins):
     def perc(n, d):
       return f"{n/d:.1%}"
-    print(f"    {index+1:>3} {count:>4}  {perc(count, total):>6}  {perc(sum(wins[:index+1]), total):>6}")
+    print(f"    {index+1:>3} {count:>4}  {perc(count, games):>6}  {perc(sum(wins[:index+1]), games):>6}")
   print()
   print(f"Total time: {stop - start:.3f} seconds (parallelism: {parallelism}, chunk size: {chunk_size}).")
 
@@ -389,7 +388,7 @@ def main():
   parser.add_argument('-i', dest='mode', action='store_const', const='interactive')
   # Run a regression test.
   parser.add_argument('-t', dest='mode', action='store_const', const='test')
-  parser.add_argument('--sampling', default=10, type=int)
+  parser.add_argument('--sampling', default=1, type=int)
   parser.add_argument('--answer_file', default=None)
   args = parser.parse_args()
 
