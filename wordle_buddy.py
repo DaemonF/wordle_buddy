@@ -56,6 +56,10 @@ class Game(PropEnum):
     'wordle', 'Wordle', 'wordlists/wordle_answers.txt',
     5, 6, datetime(2021, 6, 19),
     '*', ' on hard')
+  JAYDLE = (
+    'jaydle', 'Jaydle', 'wordlists/wordle_answers.txt',
+    5, 6, datetime(2021, 6, 19),
+    '*', ' on hard')
   LEWDLE = (
     'lewdle', 'Lewdle', 'wordlists/lewdle_answers.txt',
     5, 6, datetime(2022, 1, 17, hour=21),
