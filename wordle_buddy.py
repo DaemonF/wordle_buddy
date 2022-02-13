@@ -113,17 +113,21 @@ class Guess:
     self.score: list = [None for _ in range(self.game.word_length)]  # The actual result from the game.
 
   def compute_score(self, answer):
+    if self.wordlist.scoring_table is not None:
+      self.score = list(self.wordlist.scoring_table[self.word][answer])
+      return self.score
+
     answer = list(answer)
-    for index in range(self.game.word_length):
-      self.score[index] = gray_char
-    for index in range(self.game.word_length):
-      if self.word[index] == answer[index]:
+    for index, letter in enumerate(self.word):
+      if letter == answer[index]:
         self.score[index] = green_char
         answer[index] = None
-    for index in range(self.game.word_length):
-      if self.word[index] in answer and self.score[index] == gray_char:
+      else:
+        self.score[index] = gray_char
+    for index, letter in enumerate(self.word):
+      if self.score[index] != green_char and letter in answer:
         self.score[index] = yellow_char
-        answer[answer.index(self.word[index])] = None
+        answer[answer.index(letter)] = None
     return self.score
 
   def __str__(self):
@@ -145,12 +149,12 @@ class LetterStats():
     self.dupe_chance = tuple(self.dupe_chance)
 
 class WordList(list):
-  def __init__(self, game, wordlist):
+  def __init__(self, game, wordlist, scoring_table=None):
     super(WordList, self).__init__(wordlist)
-
     self.game = game
-    self.stats = {letter:LetterStats(self.game) for letter in letters}
+    self.scoring_table = scoring_table
 
+    self.stats = {letter:LetterStats(self.game) for letter in letters}
     for word in self:
       # Track whether a given guess would be green, yellow, or gray for this word.
       # TODO: This assumes all guesses are equally likely. Use wordlist?
@@ -180,7 +184,6 @@ class WordList(list):
           stats.dupe_chance[index] /= total_occurrences
       stats.freeze()
 
-
   def sublist(self, scored_guess):
     '''Returns a new WordList by removing all incompatible words from this wordlist.
     '''
@@ -206,7 +209,24 @@ class WordList(list):
           filter, index, letter, at_most_count)
       else:
         raise ValueError(f"Unknown score character: '{score[index]}'.")
-    return WordList(self.game, (w for w in self if filter(w)))
+    return WordList(self.game, (w for w in self if filter(w)), self.scoring_table)
+
+  def _build_scoring_table_part(self, word):
+    guess = Guess(self.game, self, word)
+    return (word, {
+      answer: ''.join(guess.compute_score(answer)) for answer in self
+    })
+
+  def build_scoring_table(self):
+    print("Building scoring table...")
+    start = time()
+    parallelism = os.cpu_count()
+    chunk_size = 5
+    with multiprocessing.Pool(parallelism) as pool:
+      parts = pool.imap(self._build_scoring_table_part, self, chunk_size)
+      self.scoring_table = { word: scores for word, scores in parts }
+    stop = time()
+    print(f"Built scoring table in {stop - start:.3f} seconds.")
 
   def grade(self, word, strategy: Strategy):
     if strategy == Strategy.FREQ:
@@ -260,7 +280,10 @@ class WordList(list):
     buckets = {}
     guess = Guess(self.game, self, word)
     for answer in self:
-      key = ''.join(guess.compute_score(answer))
+      if self.scoring_table is not None:
+        key = self.scoring_table[word][answer]
+      else:
+        key = ''.join(guess.compute_score(answer))
       buckets[key] = buckets.get(key, 0) + 1
     return len(self) / max(buckets.values())
 
@@ -335,8 +358,7 @@ def play_game_interactive(game, wordlist, strategy):
     while None in guess.score:
       resp = input("What was the score? ")
       if len(resp) == game.word_length:
-        for index, char in enumerate(resp):
-          guess.score[index] = char
+        guess.score = list(resp)
   return play_game(game, wordlist, strategy, scoring_func)
 
 def play_game_with_answer(game, wordlist, strategy, answer, quiet=False):
@@ -437,12 +459,18 @@ def main():
         if len(entry) == game.word_length:
           answerlist.append(entry)
 
+  strategy = args.strategy
+  if strategy == Strategy.BIFUR:
+    # TODO: Currently, this massively slows down the other strategies, which is
+    # unexpexcted. It seems related to the use of Multiprocessing. Investigate.
+    wordlist.build_scoring_table()
+
   if args.mode == 'test':
-    regression_test(game, wordlist, args.strategy, args.sampling, answerlist)
+    regression_test(game, wordlist, strategy, args.sampling, answerlist)
   elif args.mode == 'interactive':
-    play_game_interactive(game, wordlist, args.strategy)
+    play_game_interactive(game, wordlist, strategy)
   elif args.answer is not None:
-    play_game_with_answer(game, wordlist, args.strategy, args.answer)
+    play_game_with_answer(game, wordlist, strategy, args.answer)
   else:
     print("Showing wordlist and starting-word stats...")
     print()
