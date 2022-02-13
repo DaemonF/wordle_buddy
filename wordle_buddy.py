@@ -124,6 +124,7 @@ class Guess:
       if self.word[index] in answer and self.score[index] == gray_char:
         self.score[index] = yellow_char
         answer[answer.index(self.word[index])] = None
+    return self.score
 
   def __str__(self):
     stats = ', '.join(f"{strategy.value}: {fmt_real(self.wordlist.grade(self.word, strategy))}" for strategy in Strategy)
@@ -256,15 +257,12 @@ class WordList(list):
   def _grade_by_bifurcation(self, word):
     '''Grades a guess based on how closely it would split the wordlist in equal halves.
     '''
-    counts = [None for index, letter in enumerate(word)]
-    for index, letter in enumerate(word):
-      stats = self.stats[letter]
-      counts[index] = (
-        stats.green_chance[index] ** 2,
-        stats.yellow_chance[index] ** 2,
-        stats.gray_chance[index] ** 2)
-    average = sum(sum(counts_by_color) for counts_by_color in counts)
-    return 1 / sum(sum((count - average) ** 2 for count in counts_by_color) for counts_by_color in counts)
+    buckets = {}
+    guess = Guess(self.game, self, word)
+    for answer in self:
+      key = ''.join(guess.compute_score(answer))
+      buckets[key] = buckets.get(key, 0) + 1
+    return len(self) / max(buckets.values())
 
   def _dupe_modifier(self, word, index, letter, stats):
     '''If the Guess contains duplicate letters, discount later occurrences based on the dupe chance.
