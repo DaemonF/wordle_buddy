@@ -448,7 +448,7 @@ def main():
   else:
     print("Showing wordlist and starting-word stats...")
     print()
-    show_stats_interactive(wordlist)
+    show_stats_interactive(game, wordlist)
 
 
 if __name__ == '__main__':
