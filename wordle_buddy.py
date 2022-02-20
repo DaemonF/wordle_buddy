@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from enum import Enum
 from functools import partial
+from ordered_set import OrderedSet
 from time import time
 from tqdm import tqdm
 
@@ -80,22 +81,31 @@ class Game(PropEnum):
   WORDLE = (
     'wordle', 'Wordle', 'wordlists/wordle_answers.txt',
     5, 6, datetime(2021, 6, 19),
-    '*', ' on hard')
+    False, '', '')
+  WORDLE_HARD = (
+    'wordle_hard', 'Wordle (hard mode)', 'wordlists/wordle_answers.txt',
+    5, 6, datetime(2021, 6, 19),
+    True, '*', ' on hard')
   JAYDLE = (
     'jaydle', 'Jaydle', 'wordlists/wordle_answers.txt',
     5, 6, datetime(2021, 6, 19),
-    '*', ' on hard')
+    False, '', '')
+  JAYDLE_HARD = (
+    'jaydle_hard', 'Jaydle (hard mode)', 'wordlists/wordle_answers.txt',
+    5, 6, datetime(2021, 6, 19),
+    True, '*', ' on hard')
   LEWDLE = (
     'lewdle', 'Lewdle', 'wordlists/lewdle_answers.txt',
     5, 6, datetime(2022, 1, 17, hour=21),
-    '', '')
+    False, '', '')
 
-  def __init__(self, name, display_name, default_dict_file, word_length, max_tries, epoch, mode_symbol, mode_desc):
+  def __init__(self, name, display_name, default_dict_file, word_length, max_tries, epoch, hard_mode, mode_symbol, mode_desc):
     self.display_name = display_name
     self.default_dict_file = default_dict_file
     self.word_length = word_length
     self.max_tries = max_tries
     self.epoch = epoch
+    self.hard_mode = hard_mode
     self.mode_symbol = mode_symbol
     self.mode_desc = mode_desc
 
@@ -173,7 +183,20 @@ class LetterStats():
     self.gray_chance = tuple(self.gray_chance)
     self.dupe_chance = tuple(self.dupe_chance)
 
-class WordList(list):
+class WordList(OrderedSet):
+  def __getstate__(self):
+    return (
+      list(self),
+      self.game,
+      self.scoring_table,
+      self.stats)
+
+  def __setstate__(self, state):
+    super(WordList, self).__init__(state[0])
+    self.game = state[1]
+    self.scoring_table = state[2]
+    self.stats = state[3]
+
   def __init__(self, game, wordlist, scoring_table=None):
     super(WordList, self).__init__(wordlist)
     self.game = game
@@ -271,7 +294,10 @@ class WordList(list):
       grade += (stats.green_chance[index]
                 * self._dupe_modifier(word, index, letter, stats)
                ) / self.game.word_length
-    return grade
+
+    # For hard mode, make words in the wordlist slightly more attractive.
+    modifier = -0.01 if word not in self else 0
+    return grade + modifier
 
   def _grade_by_potential_clues(self, word):
     '''Grades a guess by how many potential clues it could give based on the wordlist.
@@ -298,7 +324,10 @@ class WordList(list):
                 + yellows * yellow_weight
                 + grays * gray_weight
                ) / self.game.word_length
-    return grade
+
+    # For hard mode, make words in the wordlist slightly more attractive.
+    modifier = -0.01 if word not in self else 0
+    return grade + modifier
 
   def _grade_by_bifurcation(self, word):
     '''Grades a guess based on how closely it would split the wordlist in equal halves.
@@ -311,7 +340,10 @@ class WordList(list):
       else:
         key = ''.join(guess.compute_score(answer))
       buckets[key] = buckets.get(key, 0) + 1
-    return len(self) / max(buckets.values())
+
+    # For hard mode, make words in the wordlist slightly more attractive.
+    modifier = 0.5 if word not in self else 0
+    return len(self) / (max(buckets.values()) + modifier)
 
   def _dupe_modifier(self, word, index, letter, stats):
     '''If the Guess contains duplicate letters, discount later occurrences based on the dupe chance.
@@ -353,13 +385,19 @@ def play_game(game, wordlist, strategy, scoring_func, results=None, quiet=False)
   if not quiet:
     print(f"Strategy: {strategy.value}")
 
+  guesslist = wordlist
   results = []
   while True:
     if not quiet:
+      words = ''
+      for index, word in enumerate(wordlist):
+        if index >= 3:
+          words += '...'
+          break
+        words += ('' if index == 0 else ', ') + word
       print()
-      print(f"List has {len(wordlist)} words: {', '.join(wordlist[:3])}")
-
-    guess = Guess(game, wordlist, max(wordlist, key=lambda word: wordlist.grade(word, strategy)))
+      print(f"List has {len(wordlist)} words: {words}")
+    guess = Guess(game, wordlist, max(guesslist, key=lambda word: wordlist.grade(word, strategy)))
     if not quiet:
       print(f"Try: {guess}")
 
@@ -372,6 +410,8 @@ def play_game(game, wordlist, strategy, scoring_func, results=None, quiet=False)
       break
 
     wordlist = wordlist.sublist(guess)
+    if game.hard_mode:
+      guesslist = wordlist
 
   if not quiet:
     print()

@@ -1,0 +1,21 @@
+Building scoring table...
+Built scoring table in 1.836 seconds.
+Regression test
+  List: 2315 words
+  Games: 2315 games of Wordle (hard mode)
+  Strategy: bifur
+
+Stats of 2315 games:
+  Wins:
+      1    1    0.0%    0.0%
+      2  122    5.3%    5.3%
+      3  903   39.0%   44.3%
+      4  987   42.6%   87.0%
+      5  240   10.4%   97.3%
+      6   48    2.1%   99.4%
+      7   10    0.4%   99.8%
+      8    4    0.2%  100.0%
+      9    0    0.0%  100.0%
+     10    0    0.0%  100.0%
+
+Total time: 349.278 seconds (parallelism: 6, chunk size: 5).
