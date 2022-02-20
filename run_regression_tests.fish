@@ -1,9 +1,9 @@
 #!/usr/bin/env fish
 
 for strat in {freq,clues,bifur}
-  ./wordle_buddy.py --strategy=$strat -t \
-    > regression_tests/$strat/wordle_answers.txt
-  ./wordle_buddy.py --strategy=$strat -t \
-    --game=lewdle \
-    > regression_tests/$strat/lewdle_answers.txt
+  for game in {lewdle,wordle}
+    ./wordle_buddy.py -t \
+        --game=$game --strategy=$strat \
+      > regression_tests/$game-$strat.txt
+  end
 end

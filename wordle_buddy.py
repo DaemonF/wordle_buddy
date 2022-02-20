@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import multiprocessing
+import pickle
 import os
 import sys
 
@@ -39,6 +40,30 @@ def fmt_stats(items, fmt_item=fmt_perc):
   return ', '.join(fmt_item(i) for i in items)
 def fmt_blocks(items, fmt_item=fmt_perc):
   return f"[ {' ][ '.join(fmt_item(i) for i in items)} ]"
+
+
+class PoolFunc:
+  def __init__(self, func, *args):
+    self.func = pickle.dumps(func)
+    self.args = ()
+    self.set_up = False
+
+  def partial(self, *args):
+    assert not self.set_up
+    self.args = tuple(pickle.dumps(arg) for arg in args)
+    return self
+
+  def setup(self):
+    global func, args, set_up
+    func = pickle.loads(self.func)
+    args = tuple(pickle.loads(arg) for arg in self.args)
+    set_up = self.set_up = True
+
+  @staticmethod
+  def __call__(arg):
+    global func, args, set_up
+    assert set_up
+    return func(*args, arg)
 
 
 class PropEnum(Enum):
@@ -211,19 +236,20 @@ class WordList(list):
         raise ValueError(f"Unknown score character: '{score[index]}'.")
     return WordList(self.game, (w for w in self if filter(w)), self.scoring_table)
 
-  def _build_scoring_table_part(self, word):
-    guess = Guess(self.game, self, word)
+  @staticmethod
+  def build_scoring_table_part(wordlist, word):
+    guess = Guess(wordlist.game, wordlist, word)
     return (word, {
-      answer: ''.join(guess.compute_score(answer)) for answer in self
+      answer: ''.join(guess.compute_score(answer))
+      for answer in wordlist
     })
 
   def build_scoring_table(self):
     print("Building scoring table...")
     start = time()
-    parallelism = os.cpu_count()
-    chunk_size = 5
-    with multiprocessing.Pool(parallelism) as pool:
-      parts = pool.imap(self._build_scoring_table_part, self, chunk_size)
+    func = PoolFunc(self.build_scoring_table_part).partial(self)
+    with multiprocessing.Pool(initializer=func.setup) as pool:
+      parts = pool.imap(func, self, chunksize=5)
       self.scoring_table = { word: scores for word, scores in parts }
     stop = time()
     print(f"Built scoring table in {stop - start:.3f} seconds.")
@@ -374,18 +400,11 @@ def play_game_with_answer(game, wordlist, strategy, answer, quiet=False):
   return play_game(game, wordlist, strategy, scoring_func, quiet=quiet)
 
 
-class RegressionTest:
-  def __init__(self, game, wordlist, strategy):
-    self.game = game
-    self.wordlist = wordlist
-    self.strategy = strategy
-
-  def __call__(self, answer):
-    try:
-      return play_game_with_answer(self.game, self.wordlist, self.strategy, answer, quiet=True)
-    except:
-      return answer
-
+def regression_test_case(wordlist, strategy, answer):
+  try:
+    return play_game_with_answer(wordlist.game, wordlist, strategy, answer, quiet=True)
+  except:
+    return answer
 
 def regression_test(game, wordlist, strategy, sampling, answerlist):
   if answerlist is None:
@@ -398,11 +417,11 @@ def regression_test(game, wordlist, strategy, sampling, answerlist):
   crashes = []
 
   start = time()
+  func = PoolFunc(regression_test_case).partial(wordlist, strategy)
   parallelism = os.cpu_count()
-  chunk_size = 5
-  with multiprocessing.Pool(parallelism) as pool:
-    all_results = pool.imap(RegressionTest(game, wordlist, strategy), answerlist, chunk_size)
-
+  chunksize = 5
+  with multiprocessing.Pool(parallelism, initializer=func.setup) as pool:
+    all_results = pool.imap(func, answerlist, chunksize)
     for index, results in tqdm(enumerate(all_results), total=games):
       if type(results) is str:
         crashes.append(results)
@@ -426,7 +445,7 @@ def regression_test(game, wordlist, strategy, sampling, answerlist):
       return f"{n/d:.1%}"
     print(f"    {index+1:>3} {count:>4}  {perc(count, games):>6}  {perc(sum(wins[:index+1]), games):>6}")
   print()
-  print(f"Total time: {stop - start:.3f} seconds (parallelism: {parallelism}, chunk size: {chunk_size}).")
+  print(f"Total time: {stop - start:.3f} seconds (parallelism: {parallelism}, chunk size: {chunksize}).")
 
 
 def main():
