@@ -140,12 +140,11 @@ class Strategy(PropEnum):
 
 
 class Guess:
-  def __init__(self, game, wordlist, word):
-    self.game = game
-    self.wordlist = wordlist
+  def __init__(self, word, wordlist):
     self.word = word
+    self.wordlist = wordlist
 
-    self.score: list = [None for _ in range(self.game.word_length)]  # The actual result from the game.
+    self.score: list = [None for _ in range(wordlist.game.word_length)]  # The actual result from the game.
 
   def compute_score(self, answer):
     if self.wordlist.scoring_table is not None:
@@ -197,7 +196,7 @@ class WordList(OrderedSet):
     self.scoring_table = state[2]
     self.stats = state[3]
 
-  def __init__(self, game, wordlist, scoring_table=None):
+  def __init__(self, wordlist, game, scoring_table=None):
     super(WordList, self).__init__(wordlist)
     self.game = game
     self.scoring_table = scoring_table
@@ -257,11 +256,11 @@ class WordList(OrderedSet):
           filter, index, letter, at_most_count)
       else:
         raise ValueError(f"Unknown score character: '{score[index]}'.")
-    return WordList(self.game, (w for w in self if filter(w)), self.scoring_table)
+    return WordList((w for w in self if filter(w)), self.game, self.scoring_table)
 
   @staticmethod
   def build_scoring_table_part(wordlist, word):
-    guess = Guess(wordlist.game, wordlist, word)
+    guess = Guess(word, wordlist)
     return (word, {
       answer: ''.join(guess.compute_score(answer))
       for answer in wordlist
@@ -272,7 +271,7 @@ class WordList(OrderedSet):
     start = time()
     func = PoolFunc(self.build_scoring_table_part).partial(self)
     with multiprocessing.Pool(initializer=func.setup) as pool:
-      parts = pool.imap(func, self, chunksize=5)
+      parts = pool.imap(func, self, chunksize=20)
       self.scoring_table = { word: scores for word, scores in parts }
     stop = time()
     print(f"Built scoring table in {stop - start:.3f} seconds.")
@@ -333,7 +332,7 @@ class WordList(OrderedSet):
     '''Grades a guess based on how closely it would split the wordlist in equal halves.
     '''
     buckets = {}
-    guess = Guess(self.game, self, word)
+    guess = Guess(word, self)
     for answer in self:
       if self.scoring_table is not None:
         key = self.scoring_table[word][answer]
@@ -356,7 +355,7 @@ def show_stats_interactive(game, wordlist):
   for strategy in Strategy:
     print(f"By {strategy.description}:")
     for guess in sorted(wordlist, key=lambda word: wordlist.grade(word, strategy), reverse=True)[:5]:
-      print(f"  {Guess(game, wordlist, guess)}")
+      print(f"  {Guess(guess, wordlist)}")
     print()
 
   while True:
@@ -374,7 +373,7 @@ def show_stats_interactive(game, wordlist):
       print()
       print(f"  Distribution of count per word it appears in:\n    {fmt_stats(stats.dupe_chance)}")
     elif len(entry) == game.word_length:
-      print(f"  {Guess(game, wordlist, entry)}")
+      print(f"  {Guess(entry, wordlist)}")
       if entry not in wordlist:
         print("  Note: Not in wordlist.")
     else:
@@ -397,7 +396,7 @@ def play_game(game, wordlist, strategy, scoring_func, results=None, quiet=False)
         words += ('' if index == 0 else ', ') + word
       print()
       print(f"List has {len(wordlist)} words: {words}")
-    guess = Guess(game, wordlist, max(guesslist, key=lambda word: wordlist.grade(word, strategy)))
+    guess = Guess(max(guesslist, key=lambda word: wordlist.grade(word, strategy)), wordlist)
     if not quiet:
       print(f"Try: {guess}")
 
@@ -459,9 +458,8 @@ def regression_test(game, wordlist, strategy, sampling, answerlist):
   start = time()
   func = PoolFunc(regression_test_case).partial(wordlist, strategy)
   parallelism = os.cpu_count()
-  chunksize = 5
   with multiprocessing.Pool(parallelism, initializer=func.setup) as pool:
-    all_results = pool.imap(func, answerlist, chunksize)
+    all_results = pool.imap(func, answerlist)
     for index, results in tqdm(enumerate(all_results), total=games):
       if type(results) is str:
         crashes.append(results)
@@ -485,7 +483,7 @@ def regression_test(game, wordlist, strategy, sampling, answerlist):
       return f"{n/d:.1%}"
     print(f"    {index+1:>3} {count:>4}  {perc(count, games):>6}  {perc(sum(wins[:index+1]), games):>6}")
   print()
-  print(f"Total time: {stop - start:.3f} seconds (parallelism: {parallelism}, chunk size: {chunksize}).")
+  print(f"Total time: {stop - start:.3f} seconds (parallelism: {parallelism}).")
 
 
 def main():
@@ -507,7 +505,7 @@ def main():
   dict_file = args.dict_file if args.dict_file is not None else game.default_dict_file
   wordlist = None
   with open(dict_file, 'r') as f:
-    wordlist = WordList(game, (entry.strip() for entry in f.readlines() if len(entry.strip()) == game.word_length))
+    wordlist = WordList((entry.strip() for entry in f.readlines() if len(entry.strip()) == game.word_length), game)
 
   answerlist = None
   if args.answer_file is not None:
