@@ -453,7 +453,7 @@ def regression_test(game, wordlist, strategy, sampling, answerlist):
     answerlist = [answer for index, answer in enumerate(answerlist) if index % sampling == 0]
 
   games = len(answerlist)
-  wins = [0 for _ in range(20)]
+  wins = [0 for _ in range(10)]
   crashes = []
 
   start = time()
