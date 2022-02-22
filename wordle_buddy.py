@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
+import argparse
 import multiprocessing
 import pickle
 import os
 import sys
 
-from argparse import ArgumentParser
 from datetime import datetime
 from enum import Enum
 from functools import partial
@@ -166,28 +166,23 @@ class Game(PropEnum):
     self.mode_desc = mode_desc
 
   def fmt_results(self, results):
+    def _fmt_result(result):
+      score = "".join(
+        score_char_to_emoji[c] for c in result["score"]
+      )
+      words = result["len_wordlist"]
+      return f"{score} {words} word{'' if words == 1 else 's'}"
+
     number = (datetime.now() - self.epoch).days
+    tries = len(results)
     return "\n".join(
       (
-        f"{self.display_name} {number} {len(results)}/{self.max_tries}{self.mode_symbol}",
+        f"{self.display_name} {number} {tries}/{self.max_tries}{self.mode_symbol}",
         "",
-        self._fmt_results_emoji(results),
+        *(_fmt_result(result) for result in results),
         "",
         f"(Bot play{self.mode_desc})",
       )
-    )
-
-  def _fmt_results_emoji(self, results):
-    return "\n".join(
-      " ".join(
-        (
-          "".join(
-            score_char_to_emoji[c] for c in result["score"]
-          ),
-          f"{result['len_wordlist']} word{'s' if result['len_wordlist'] > 1 else ''}",
-        )
-      )
-      for result in results
     )
 
 
@@ -254,20 +249,6 @@ class LetterStats:
 
 
 class WordList(OrderedSet):
-  def __getstate__(self):
-    return (
-      list(self),
-      self.game,
-      self.scoring_table,
-      self.stats,
-    )
-
-  def __setstate__(self, state):
-    super(WordList, self).__init__(state[0])
-    self.game = state[1]
-    self.scoring_table = state[2]
-    self.stats = state[3]
-
   def __init__(self, wordlist, game, scoring_table=None):
     super(WordList, self).__init__(wordlist)
     self.game = game
@@ -306,6 +287,20 @@ class WordList(OrderedSet):
         if total_occurrences > 0:
           stats.dupe_chance[index] /= total_occurrences
       stats.freeze()
+
+  def __getstate__(self):
+    return (
+      list(self),
+      self.game,
+      self.scoring_table,
+      self.stats,
+    )
+
+  def __setstate__(self, state):
+    super(WordList, self).__init__(state[0])
+    self.game = state[1]
+    self.scoring_table = state[2]
+    self.stats = state[3]
 
   def sublist(self, scored_guess):
     """Returns a new WordList by removing all incompatible words from this wordlist."""
@@ -426,9 +421,9 @@ class WordList(OrderedSet):
       grays *= 1 if word.index(letter) == index else 0
 
       # Weight each category by how much it would split up the wordlist.
-      green_weight = 1 / 2 - abs(1 / 2 - greens)
-      yellow_weight = 1 / 2 - abs(1 / 2 - yellows)
-      gray_weight = 1 / 2 - abs(1 / 2 - grays)
+      green_weight = 0.5 - abs(0.5 - greens)
+      yellow_weight = 0.5 - abs(0.5 - yellows)
+      gray_weight = 0.5 - abs(0.5 - grays)
 
       grade += (
         greens * green_weight
@@ -488,19 +483,15 @@ def show_stats_interactive(game, wordlist):
         f"  Appears anywhere in word: {fmt_perc(sum(stats.green_chance))}"
       )
       print()
-      print(
-        f"  Positional chance of green:\n    {fmt_blocks(stats.green_chance)}"
-      )
-      print(
-        f"  Positional chance of yellow:\n    {fmt_blocks(stats.yellow_chance)}"
-      )
-      print(
-        f"  Positional chance of gray:\n    {fmt_blocks(stats.gray_chance)}"
-      )
+      print("  Positional chance of green:")
+      print(f"    {fmt_blocks(stats.green_chance)}")
+      print("  Positional chance of yellow:")
+      print(f"    {fmt_blocks(stats.yellow_chance)}")
+      print("  Positional chance of gray:")
+      print(f"    {fmt_blocks(stats.gray_chance)}")
       print()
-      print(
-        f"  Distribution of count per word it appears in:\n    {fmt_stats(stats.dupe_chance)}"
-      )
+      print("  Distribution of count per word it appears in:")
+      print(f"    {fmt_stats(stats.dupe_chance)}")
     elif len(entry) == game.word_length:
       print(f"  {Guess(entry, wordlist)}")
       if entry not in wordlist:
@@ -663,71 +654,79 @@ def regression_test(
   )
 
 
+def _main(
+  *,
+  game,
+  strategy,
+  dict_file,
+  answer,
+  mode,
+  sampling,
+  answer_file,
+):
+  with open(dict_file or game.default_dict_file, "r") as f:
+    wordlist = WordList(
+      (
+        entry
+        for entry in (line.strip() for line in f.readlines())
+        if len(entry) == game.word_length
+      ),
+      game,
+    )
+
+  answerlist = None
+  if answer_file is not None:
+    with open(answer_file, "r") as f:
+      answerlist = [
+        entry
+        for entry in (line.strip() for line in f.readlines())
+        if len(entry) == game.word_length
+      ]
+
+  if strategy == Strategy.BIFUR:
+    # TODO: Currently, this massively slows down the other strategies, which is
+    # unexpexcted. It seems related to the use of Multiprocessing. Investigate.
+    wordlist.build_scoring_table()
+
+  if mode == "test":
+    regression_test(
+      game, wordlist, strategy, sampling, answerlist
+    )
+  elif mode == "interactive":
+    play_game_interactive(game, wordlist, strategy)
+  elif answer is not None:
+    play_game_with_answer(game, wordlist, strategy, answer)
+  else:
+    print("Showing wordlist and starting-word stats...")
+    print()
+    show_stats_interactive(game, wordlist)
+
+
 def main():
-  parser = ArgumentParser()
+  parser = argparse.ArgumentParser()
   parser.add_argument("--game", default="jaydle", type=Game)
   parser.add_argument(
     "--strategy", default="bifur", type=Strategy
   )
   parser.add_argument("--dict_file", default=None)
+
   # Play game with known answer.
   parser.add_argument("--answer")
+
   # Play game interactively.
   parser.add_argument(
     "-i", dest="mode", action="store_const", const="interactive"
   )
+
   # Run a regression test.
   parser.add_argument(
     "-t", dest="mode", action="store_const", const="test"
   )
   parser.add_argument("--sampling", default=1, type=int)
   parser.add_argument("--answer_file", default=None)
+
   args = parser.parse_args()
-
-  game = args.game
-  dict_file = (
-    args.dict_file
-    if args.dict_file is not None
-    else game.default_dict_file
-  )
-  wordlist = None
-  with open(dict_file, "r") as f:
-    wordlist = WordList(
-      (
-        entry.strip()
-        for entry in f.readlines()
-        if len(entry.strip()) == game.word_length
-      ),
-      game,
-    )
-
-  answerlist = None
-  if args.answer_file is not None:
-    answerlist = []
-    with open(args.answer_file, "r") as f:
-      for l in f.readlines():
-        entry = l.strip()
-        if len(entry) == game.word_length:
-          answerlist.append(entry)
-
-  strategy = args.strategy
-  if strategy == Strategy.BIFUR:
-    # TODO: Currently, this massively slows down the other strategies, which is
-    # unexpexcted. It seems related to the use of Multiprocessing. Investigate.
-    wordlist.build_scoring_table()
-
-  if args.mode == "test":
-    regression_test(
-      game, wordlist, strategy, args.sampling, answerlist
-    )
-  elif args.mode == "interactive":
-    play_game_interactive(game, wordlist, strategy)
-  elif args.answer is not None:
-    play_game_with_answer(game, wordlist, strategy, args.answer)
-  else:
-    print("Showing wordlist and starting-word stats...")
-    print()
-    show_stats_interactive(game, wordlist)
+  _main(**vars(args))
 
 
 if __name__ == "__main__":
