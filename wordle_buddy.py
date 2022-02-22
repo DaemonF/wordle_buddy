@@ -29,9 +29,9 @@ score_char_to_emoji = {
 }
 
 # Letters from 'a' to 'z', for convenience.
-letters = [
+letters = tuple(
   chr(ordinal) for ordinal in range(ord("a"), ord("z") + 1)
-]
+)
 
 
 def occurrences(word, letter):
@@ -304,60 +304,53 @@ class WordList(OrderedSet):
     self.scoring_table = state[2]
     self.stats = state[3]
 
-  def sublist(self, scored_guess):
+  def sublist(self, guess, score):
     """Returns a new WordList by removing all incompatible words from this wordlist."""
-    if scored_guess.wordlist != self:
-      raise ValueError(
-        f"Guess is not associated with this wordlist."
-      )
-    filter = lambda w: True
-    guess = scored_guess.word
-    score = scored_guess.score
-    for index, letter in enumerate(guess):
-      if score[index] == green_char:
-        filter = partial(
-          lambda f, i, l, w: f(w) and w[i] == l,
-          filter,
+    assert guess.wordlist == self
+    func = lambda w: True
+    guess = guess.word
+    for index, (g, s) in enumerate(zip(guess, score)):
+      if s == green_char:
+        func = partial(
+          lambda f, i, g, w: w[i] == g and f(w),
+          func,
           index,
-          letter,
+          g,
         )
-      elif score[index] == yellow_char:
+      elif s == yellow_char:
         at_least_count = sum(
           1
-          for j in range(self.game.word_length)
-          if guess[j] == letter
-          and score[j] in (yellow_char, green_char)
+          for g2, s2 in zip(guess, score)
+          if g2 == g and (s2 == yellow_char or s2 == green_char)
         )
-        filter = partial(
-          lambda f, i, l, c, w: f(w)
-          and w[i] != l
-          and occurrences(w, l) >= c,
-          filter,
+        func = partial(
+          lambda f, i, g, c, w: w[i] != g
+          and f(w)
+          and occurrences(w, g) >= c,
+          func,
           index,
-          letter,
+          g,
           at_least_count,
         )
-      elif score[index] == gray_char:
-        at_most_count = occurrences(guess, letter) - sum(
+      elif s == gray_char:
+        at_most_count = occurrences(guess, g) - sum(
           1
-          for j in range(self.game.word_length)
-          if guess[j] == letter and score[j] == gray_char
+          for g2, s2 in zip(guess, score)
+          if g2 == g and s2 == gray_char
         )
-        filter = partial(
-          lambda f, i, l, c, w: f(w)
-          and w[i] != l
-          and occurrences(w, l) <= c,
-          filter,
+        func = partial(
+          lambda f, i, g, c, w: w[i] != g
+          and f(w)
+          and occurrences(w, g) <= c,
+          func,
           index,
-          letter,
+          g,
           at_most_count,
         )
       else:
-        raise ValueError(
-          f"Unknown score character: '{score[index]}'."
-        )
+        assert False
     return WordList(
-      (w for w in self if filter(w)),
+      (w for w in self if func(w)),
       self.game,
       self.scoring_table,
     )
@@ -440,13 +433,16 @@ class WordList(OrderedSet):
   def _grade_by_bifurcation(self, word):
     """Grades a guess based on how closely it would split the wordlist in equal halves."""
     buckets = {}
-    guess = Guess(word, self)
-    for answer in self:
-      if self.scoring_table is not None:
-        key = self.scoring_table[word][answer]
-      else:
+    if self.scoring_table is not None:
+      scores = self.scoring_table[word]
+      for answer in self:
+        key = scores[answer]
+        buckets[key] = buckets.get(key, 0) + 1
+    else:
+      guess = Guess(word, self)
+      for answer in self:
         key = "".join(guess.compute_score(answer))
-      buckets[key] = buckets.get(key, 0) + 1
+        buckets[key] = buckets.get(key, 0) + 1
 
     # For hard mode, make words in the wordlist slightly more attractive.
     modifier = 0.5 if word not in self else 0
@@ -538,14 +534,14 @@ def play_game(
     if not quiet:
       print(f"Try: {guess}")
 
-    scoring_func(guess)
+    score = scoring_func(guess)
     results.append(
-      {"score": guess.score, "len_wordlist": len(wordlist)}
+      {"score": score, "len_wordlist": len(wordlist)}
     )
-    if occurrences(guess.score, green_char) == game.word_length:
+    if occurrences(score, green_char) == game.word_length:
       break
 
-    wordlist = wordlist.sublist(guess)
+    wordlist = wordlist.sublist(guess, score)
     if game.hard_mode:
       guesslist = wordlist
 
@@ -558,10 +554,10 @@ def play_game(
 
 def play_game_interactive(game, wordlist, strategy):
   def scoring_func(guess):
-    while None in guess.score:
+    while True:
       resp = input("What was the score? ")
       if len(resp) == game.word_length:
-        guess.score = list(resp)
+        return list(resp)
 
   return play_game(game, wordlist, strategy, scoring_func)
 
@@ -575,9 +571,10 @@ def play_game_with_answer(
     return
 
   def scoring_func(guess):
-    guess.compute_score(answer)
+    score = guess.compute_score(answer)
     if not quiet:
-      print(f"Score: {''.join(guess.score)}")
+      print(f"Score: {''.join(score)}")
+    return score
 
   return play_game(
     game, wordlist, strategy, scoring_func, quiet=quiet
