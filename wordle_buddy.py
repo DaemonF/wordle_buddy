@@ -204,30 +204,6 @@ class Guess:
     self.word = word
     self.wordlist = wordlist
 
-    self.score: list = [
-      None for _ in range(wordlist.game.word_length)
-    ]  # The actual result from the game.
-
-  def compute_score(self, answer):
-    if self.wordlist.scoring_table is not None:
-      self.score = list(
-        self.wordlist.scoring_table[self.word][answer]
-      )
-      return self.score
-
-    answer = list(answer)
-    for index, letter in enumerate(self.word):
-      if letter == answer[index]:
-        self.score[index] = green_char
-        answer[index] = None
-      else:
-        self.score[index] = gray_char
-    for index, letter in enumerate(self.word):
-      if self.score[index] != green_char and letter in answer:
-        self.score[index] = yellow_char
-        answer[answer.index(letter)] = None
-    return self.score
-
   def __str__(self):
     stats = ", ".join(
       f"{strategy.value}: {fmt_real(self.wordlist.grade(self.word, strategy))}"
@@ -255,6 +231,8 @@ class WordList(OrderedSet):
     super(WordList, self).__init__(wordlist)
     self.game = game
     self.scoring_table = scoring_table
+
+    self._score = [None for _ in range(game.word_length)]
 
     self.stats = {
       letter: LetterStats(self.game) for letter in letters
@@ -295,20 +273,23 @@ class WordList(OrderedSet):
       list(self),
       self.game,
       self.scoring_table,
+      self._score,
       self.stats,
     )
 
   def __setstate__(self, state):
     super(WordList, self).__init__(state[0])
-    self.game = state[1]
-    self.scoring_table = state[2]
-    self.stats = state[3]
+    (
+      _,
+      self.game,
+      self.scoring_table,
+      self._score,
+      self.stats,
+    ) = state
 
   def sublist(self, guess, score):
     """Returns a new WordList by removing all incompatible words from this wordlist."""
-    assert guess.wordlist == self
     func = lambda w: True
-    guess = guess.word
     for index, (g, s) in enumerate(zip(guess, score)):
       if s == green_char:
         func = partial(
@@ -355,13 +336,27 @@ class WordList(OrderedSet):
       self.scoring_table,
     )
 
+  def compute_score(self, guess, answer):
+    """WARNING: Return value is mutable for performance reasons. Must use or copy before calling this method again."""
+    answer = list(answer)
+    for index, letter in enumerate(guess):
+      if letter == answer[index]:
+        self._score[index] = green_char
+        answer[index] = None
+      else:
+        self._score[index] = gray_char
+    for index, letter in enumerate(guess):
+      if self._score[index] != green_char and letter in answer:
+        self._score[index] = yellow_char
+        answer[answer.index(letter)] = None
+    return self._score
+
   @staticmethod
   def build_scoring_table_part(wordlist, word):
-    guess = Guess(word, wordlist)
     return (
       word,
       {
-        answer: "".join(guess.compute_score(answer))
+        answer: "".join(wordlist.compute_score(word, answer))
         for answer in wordlist
       },
     )
@@ -441,7 +436,7 @@ class WordList(OrderedSet):
     else:
       guess = Guess(word, self)
       for answer in self:
-        key = "".join(guess.compute_score(answer))
+        key = "".join(self.compute_score(word, answer))
         buckets[key] = buckets.get(key, 0) + 1
 
     # For hard mode, make words in the wordlist slightly more attractive.
@@ -524,19 +519,16 @@ def play_game(
         words += ("" if index == 0 else ", ") + word
       print()
       print(f"List has {len(wordlist)} words: {words}")
-    guess = Guess(
-      max(
-        guesslist,
-        key=lambda word: wordlist.grade(word, strategy),
-      ),
-      wordlist,
+    guess = max(
+      guesslist,
+      key=lambda word: wordlist.grade(word, strategy),
     )
     if not quiet:
       print(f"Try: {guess}")
 
     score = scoring_func(guess)
     results.append(
-      {"score": score, "len_wordlist": len(wordlist)}
+      {"score": tuple(score), "len_wordlist": len(wordlist)}
     )
     if occurrences(score, green_char) == game.word_length:
       break
@@ -571,7 +563,7 @@ def play_game_with_answer(
     return
 
   def scoring_func(guess):
-    score = guess.compute_score(answer)
+    score = wordlist.compute_score(guess, answer)
     if not quiet:
       print(f"Score: {''.join(score)}")
     return score
