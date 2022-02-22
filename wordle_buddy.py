@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
+import cProfile as profile
 import multiprocessing
 import pickle
+import pstats
 import os
 import sys
 
@@ -10,7 +12,7 @@ from datetime import datetime
 from enum import Enum
 from functools import partial
 from ordered_set import OrderedSet
-from time import time
+from time import time, perf_counter_ns
 from tqdm import tqdm
 
 
@@ -659,6 +661,7 @@ def _main(
   game,
   strategy,
   dict_file,
+  profile,
   answer,
   mode,
   sampling,
@@ -709,6 +712,9 @@ def main():
     "--strategy", default="bifur", type=Strategy
   )
   parser.add_argument("--dict_file", default=None)
+  parser.add_argument(
+    "--profile", action=argparse.BooleanOptionalAction
+  )
 
   # Play game with known answer.
   parser.add_argument("--answer")
@@ -726,7 +732,18 @@ def main():
   parser.add_argument("--answer_file", default=None)
 
   args = parser.parse_args()
-  _main(**vars(args))
+  if args.profile:
+    with profile.Profile(
+      timer=perf_counter_ns,
+      timeunit=1e-9,
+      subcalls=True,
+      builtins=True,
+    ) as pr:
+      _main(**vars(args))
+    p = pstats.Stats(pr)
+    p.sort_stats(pstats.SortKey.TIME).print_stats()
+  else:
+    _main(**vars(args))
 
 
 if __name__ == "__main__":
