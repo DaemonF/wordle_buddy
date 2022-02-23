@@ -34,6 +34,19 @@ letters = tuple(
 )
 
 
+def inds(score):
+  i = 0
+  for s in score:
+    i *= 3
+    if s == gray_char:
+      i += 0
+    elif s == yellow_char:
+      i += 1
+    else:
+      i += 2
+  return i
+
+
 def occurrences(word, letter):
   return sum(1 for l in word if l == letter)
 
@@ -356,7 +369,7 @@ class WordList(OrderedSet):
     return (
       word,
       {
-        answer: "".join(wordlist.compute_score(word, answer))
+        answer: inds(wordlist.compute_score(word, answer))
         for answer in wordlist
       },
     )
@@ -427,21 +440,19 @@ class WordList(OrderedSet):
 
   def _grade_by_bifurcation(self, word):
     """Grades a guess based on how closely it would split the wordlist in equal halves."""
-    buckets = {}
+    buckets = [0 for _ in range(3 ** self.game.word_length)]
     if self.scoring_table is not None:
       scores = self.scoring_table[word]
       for answer in self:
-        key = scores[answer]
-        buckets[key] = buckets.get(key, 0) + 1
+        buckets[scores[answer]] += 1
     else:
       guess = Guess(word, self)
       for answer in self:
-        key = "".join(self.compute_score(word, answer))
-        buckets[key] = buckets.get(key, 0) + 1
+        buckets[inds(self.compute_score(word, answer))] += 1
 
     # For hard mode, make words in the wordlist slightly more attractive.
     modifier = 0.5 if word not in self else 0
-    return len(self) / (max(buckets.values()) + modifier)
+    return len(self) / (max(buckets) + modifier)
 
   def _dupe_modifier(self, word, index, letter, stats):
     """If the Guess contains duplicate letters, discount later occurrences based on the dupe chance."""

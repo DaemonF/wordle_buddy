@@ -1,5 +1,5 @@
 Building scoring table...
-Built scoring table in 0.014 seconds.
+Built scoring table in 0.015 seconds.
 Regression test
   List: 92 words
   Games: 92 games of Lewdle
@@ -18,4 +18,4 @@ Stats of 92 games:
       9    0    0.0%  100.0%
      10    0    0.0%  100.0%
 
-Total time: 0.047 seconds (parallelism: 6).
+Total time: 0.064 seconds (parallelism: 6).
