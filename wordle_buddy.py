@@ -269,15 +269,13 @@ class WordList(OrderedSet):
 
     # Normalize
     total_words = len(self)
-    for letter in letters:
-      stats = self.stats[letter]
-      total_occurrences = sum(stats.dupe_chance)
+    for letter, stats in self.stats.items():
+      total_occurrences = sum(stats.dupe_chance) or 1
       for index in range(self.game.word_length):
         stats.green_chance[index] /= total_words
         stats.yellow_chance[index] /= total_words
         stats.gray_chance[index] /= total_words
-        if total_occurrences > 0:
-          stats.dupe_chance[index] /= total_occurrences
+        stats.dupe_chance[index] /= total_occurrences
       stats.freeze()
 
   def __getstate__(self):
@@ -583,8 +581,7 @@ def regression_test_case(wordlist, strategy, answer):
 def regression_test(
   game, wordlist, strategy, sampling, answerlist
 ):
-  if answerlist is None:
-    answerlist = wordlist
+  answerlist = answerlist or wordlist
   if sampling != 1:
     answerlist = [
       answer
