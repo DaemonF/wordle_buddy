@@ -315,7 +315,7 @@ class WordList(OrderedSet):
         at_least_count = sum(
           1
           for g2, s2 in zip(guess, score)
-          if g2 == g and (s2 == yellow_char or s2 == green_char)
+          if g2 == g and s2 != gray_char
         )
         func = partial(
           lambda f, i, g, c, w: w[i] != g
@@ -327,10 +327,10 @@ class WordList(OrderedSet):
           at_least_count,
         )
       elif s == gray_char:
-        at_most_count = occurrences(guess, g) - sum(
+        at_most_count = sum(
           1
           for g2, s2 in zip(guess, score)
-          if g2 == g and s2 == gray_char
+          if g2 == g and s2 != gray_char
         )
         func = partial(
           lambda f, i, g, c, w: w[i] != g
