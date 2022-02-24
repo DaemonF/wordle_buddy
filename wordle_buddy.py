@@ -10,7 +10,6 @@ import sys
 
 from datetime import datetime
 from enum import Enum
-from functools import partial
 from ordered_set import OrderedSet
 from time import time, perf_counter_ns
 from tqdm import tqdm
@@ -302,49 +301,37 @@ class WordList(OrderedSet):
 
   def sublist(self, guess, score):
     """Returns a new WordList by removing all incompatible words from this wordlist."""
-    func = lambda w: True
-    for index, (g, s) in enumerate(zip(guess, score)):
+    f = lambda word: True
+    for i, (g, s) in enumerate(zip(guess, score)):
       if s == green_char:
-        func = partial(
-          lambda f, i, g, w: w[i] == g and f(w),
-          func,
-          index,
-          g,
+        f = lambda word, i=i, g=g, f=f: (
+          word[i] == g and f(word)
         )
       elif s == yellow_char:
-        at_least_count = sum(
+        count = sum(
           1
           for g2, s2 in zip(guess, score)
           if g2 == g and s2 != gray_char
         )
-        func = partial(
-          lambda f, i, g, c, w: w[i] != g
-          and f(w)
-          and occurrences(w, g) >= c,
-          func,
-          index,
-          g,
-          at_least_count,
+        f = lambda word, i=i, g=g, c=count, f=f: (
+          word[i] != g and f(word) and occurrences(word, g) >= c
         )
+
       elif s == gray_char:
-        at_most_count = sum(
+        count = sum(
           1
           for g2, s2 in zip(guess, score)
           if g2 == g and s2 != gray_char
         )
-        func = partial(
-          lambda f, i, g, c, w: w[i] != g
-          and f(w)
-          and occurrences(w, g) <= c,
-          func,
-          index,
-          g,
-          at_most_count,
+        f = lambda word, i=i, g=g, c=count, f=f: (
+          word[i] != g and f(word) and occurrences(word, g) <= c
         )
+
       else:
         assert False
+
     return WordList(
-      (w for w in self if func(w)),
+      (word for word in self if f(word)),
       self.game,
       self.scoring_table,
     )
