@@ -8,6 +8,7 @@ import pstats
 import os
 import sys
 
+from contextlib import contextmanager
 from datetime import datetime
 from enum import Enum
 from ordered_set import OrderedSet
@@ -64,6 +65,16 @@ def fmt_stats(items, fmt_item=fmt_perc):
 
 def fmt_blocks(items, fmt_item=fmt_perc):
   return f"[ {' ][ '.join(fmt_item(i) for i in items)} ]"
+
+
+class FakeMultiprocessing:
+  @contextmanager
+  def Pool(self, initializer=None):
+    initializer()
+    yield self
+
+  def imap_unordered(self, func, it, chunksize=None):
+    return (func(i) for i in it)
 
 
 class PoolFunc:
@@ -454,10 +465,10 @@ def show_stats_interactive(game, wordlist):
   for strategy in Strategy:
     print(f"By {strategy.description}:")
     for guess in sorted(
-    wordlist,
-    key=lambda word: wordlist.grade(word, strategy),
-    reverse=True,
-  )[:5]:
+      wordlist,
+      key=lambda word: wordlist.grade(word, strategy),
+      reverse=True,
+    )[:5]:
       print(f"  {Guess(guess, wordlist)}")
     print()
 
@@ -717,6 +728,8 @@ def main():
 
   args = parser.parse_args()
   if args.profile:
+    global multiprocessing
+    multiprocessing = FakeMultiprocessing()
     with profile.Profile(
       timer=perf_counter_ns,
       timeunit=1e-9,
