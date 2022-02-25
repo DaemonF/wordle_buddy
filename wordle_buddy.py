@@ -16,17 +16,15 @@ from time import time, perf_counter_ns
 from tqdm import tqdm
 
 
-# Characters used to display the score.
-green_char = "!"
-yellow_char = "?"
-gray_char = "x"
+# Constants for the possible scores.
+GREEN = 0
+YELLOW = 1
+GRAY = 2
 
-# Conversion to emoji for official output format.
-score_char_to_emoji = {
-  green_char: "\U0001F7E9",
-  yellow_char: "\U0001F7E8",
-  gray_char: "\U00002B1B",
-}
+# Mappings to display formats.
+score_chars = ("!", "?", "x")
+score_emoji = ("\U0001F7E9", "\U0001F7E8", "\U00002B1B")
+
 
 # Letters from 'a' to 'z', for convenience.
 letters = tuple(
@@ -37,13 +35,7 @@ letters = tuple(
 def inds(score):
   i = 0
   for s in score:
-    i *= 3
-    if s == gray_char:
-      i += 0
-    elif s == yellow_char:
-      i += 1
-    else:
-      i += 2
+    i = i * 3 + s
   return i
 
 
@@ -193,7 +185,7 @@ class Game(PropEnum):
   def fmt_results(self, results):
     def _fmt_result(result):
       score = "".join(
-        score_char_to_emoji[c] for c in result["score"]
+        score_emoji[c] for c in result["score"]
       )
       words = result["len_wordlist"]
       return f"{score} {words} word{'' if words == 1 else 's'}"
@@ -255,7 +247,7 @@ class WordList(OrderedSet):
     self.game = game
     self.scoring_table = scoring_table
 
-    self._score = [None for _ in range(game.word_length)]
+    self._score = [0 for _ in range(game.word_length)]
 
     self.stats = {
       letter: LetterStats(self.game) for letter in letters
@@ -312,25 +304,25 @@ class WordList(OrderedSet):
     """Returns a new WordList by removing all incompatible words from this wordlist."""
     f = lambda word: True
     for i, (g, s) in enumerate(zip(guess, score)):
-      if s == green_char:
+      if s == GREEN:
         f = lambda word, i=i, g=g, f=f: (
           word[i] == g and f(word)
         )
-      elif s == yellow_char:
+      elif s == YELLOW:
         count = sum(
           1
           for g2, s2 in zip(guess, score)
-          if g2 == g and s2 != gray_char
+          if g2 == g and s2 != GRAY
         )
         f = lambda word, i=i, g=g, c=count, f=f: (
           word[i] != g and f(word) and occurrences(word, g) >= c
         )
 
-      elif s == gray_char:
+      elif s == GRAY:
         count = sum(
           1
           for g2, s2 in zip(guess, score)
-          if g2 == g and s2 != gray_char
+          if g2 == g and s2 != GRAY
         )
         f = lambda word, i=i, g=g, c=count, f=f: (
           word[i] != g and f(word) and occurrences(word, g) <= c
@@ -350,13 +342,13 @@ class WordList(OrderedSet):
     answer = list(answer)
     for index, letter in enumerate(guess):
       if letter == answer[index]:
-        self._score[index] = green_char
+        self._score[index] = GREEN
         answer[index] = None
       else:
-        self._score[index] = gray_char
+        self._score[index] = GRAY
     for index, letter in enumerate(guess):
-      if self._score[index] != green_char and letter in answer:
-        self._score[index] = yellow_char
+      if self._score[index] != GREEN and letter in answer:
+        self._score[index] = YELLOW
         answer[answer.index(letter)] = None
     return self._score
 
@@ -540,7 +532,7 @@ def play_game(
     results.append(
       {"score": tuple(score), "len_wordlist": len(wordlist)}
     )
-    if occurrences(score, green_char) == game.word_length:
+    if occurrences(score, GREEN) == game.word_length:
       break
 
     wordlist = wordlist.sublist(guess, score)
@@ -561,7 +553,7 @@ def play_game_interactive(game, wordlist, strategy):
       if not sys.stdin.isatty():
         print(entry)
       if len(entry) == game.word_length:
-        return list(entry)
+        return tuple(score_chars.index(c) for c in entry)
 
   return play_game(game, wordlist, strategy, scoring_func)
 
@@ -577,7 +569,7 @@ def play_game_with_answer(
   def scoring_func(guess):
     score = wordlist.compute_score(guess, answer)
     if not quiet:
-      print(f"Score: {''.join(score)}")
+      print(f"Score: {''.join(score_chars[s] for s in score)}")
     return score
 
   return play_game(
