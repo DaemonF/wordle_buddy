@@ -364,7 +364,7 @@ class WordList(OrderedSet):
     start = time()
     func = PoolFunc(self.build_scoring_table_part).partial(self)
     with multiprocessing.Pool(initializer=func.setup) as pool:
-      parts = pool.imap(func, self, chunksize=20)
+      parts = pool.imap_unordered(func, self, chunksize=20)
       self.scoring_table = {
         word: scores for word, scores in parts
       }
@@ -601,7 +601,7 @@ def regression_test(
   with multiprocessing.Pool(
     parallelism, initializer=func.setup
   ) as pool:
-    all_results = pool.imap(func, answerlist)
+    all_results = pool.imap_unordered(func, answerlist)
     for index, results in tqdm(
       enumerate(all_results), total=games
     ):
