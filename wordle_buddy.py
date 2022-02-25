@@ -182,36 +182,51 @@ class Game(PropEnum):
     self.mode_symbol = mode_symbol
     self.mode_desc = mode_desc
 
-  def fmt_results(self, results):
-    def _fmt_result(result):
-      score = "".join(
-        score_emoji[c] for c in result["score"]
-      )
-      words = result["len_wordlist"]
-      return f"{score} {words} word{'' if words == 1 else 's'}"
-
-    number = (datetime.now() - self.epoch).days
-    tries = len(results)
-    return "\n".join(
-      (
-        f"{self.display_name} {number} {tries}/{self.max_tries}{self.mode_symbol}",
-        "",
-        *(_fmt_result(result) for result in results),
-        "",
-        f"(Bot play{self.mode_desc})",
-      )
+  def fmt_result(self, result):
+    game_id = (datetime.now() - self.epoch).days
+    return (
+      f"{self.display_name} {game_id} {len(result.tries)}/{self.max_tries}{self.mode_symbol}\n\n"
+      f"{result}\n\n"
+      f"(Bot play{self.mode_desc})\n"
     )
 
 
 class Strategy(PropEnum):
-  """All strategies that can be used."""
+  """The strategy to use when playing a game."""
 
-  FREQ = "freq", "positional letter frequency"
-  CLUES = "clues", "potential clue value"
-  BIFUR = "bifur", "maximum wordlist bifurcation"
+  FREQ = ("freq", "positional letter frequency")
+  CLUES = ("clues", "potential clue value")
+  BIFUR = ("bifur", "maximum wordlist bifurcation")
 
   def __init__(self, name, description):
     self.description = description
+
+
+class Result:
+  """The outcome of a game."""
+
+  def __init__(self, tries):
+    self.tries = tries
+
+  def __str__(self):
+    return "\n".join(
+      score.fmt_emoji_and_stats() for score in self.tries
+    )
+
+
+class Score:
+  """The outcome of a single try in a game."""
+
+  def __init__(self, score, wordlist):
+    self.score = score
+    self.words = len(wordlist)
+
+  def __str__(self):
+    return "".join(s.char for s in self.score)
+
+  def fmt_emoji_and_stats(self):
+    score = "".join(score_emoji[s] for s in self.score)
+    return f"{score} " f"{self.words} word{'s'[:self.words^1]}"
 
 
 class Guess:
@@ -503,14 +518,13 @@ def play_game(
   wordlist,
   strategy,
   scoring_func,
-  results=None,
   quiet=False,
 ):
   if not quiet:
     print(f"Strategy: {strategy.value}")
 
   guesslist = wordlist
-  results = []
+  tries = []
   while True:
     if not quiet:
       words = ""
@@ -529,9 +543,7 @@ def play_game(
       print(f"Try: {guess}")
 
     score = scoring_func(guess)
-    results.append(
-      {"score": tuple(score), "len_wordlist": len(wordlist)}
-    )
+    tries.append(Score(tuple(score), wordlist))
     if occurrences(score, GREEN) == game.word_length:
       break
 
@@ -539,11 +551,12 @@ def play_game(
     if game.hard_mode:
       guesslist = wordlist
 
+  result = Result(tries)
   if not quiet:
     print()
     print()
-    print(game.fmt_results(results))
-  return results
+    print(game.fmt_result(result))
+  return result
 
 
 def play_game_interactive(game, wordlist, strategy):
@@ -561,10 +574,7 @@ def play_game_interactive(game, wordlist, strategy):
 def play_game_with_answer(
   game, wordlist, strategy, answer, quiet=False
 ):
-  if answer not in wordlist:
-    if not quiet:
-      print(f"'{answer}' is not in wordlist. Exiting...")
-    return
+  assert answer in wordlist
 
   def scoring_func(guess):
     score = wordlist.compute_score(guess, answer)
@@ -609,14 +619,12 @@ def regression_test(
   with multiprocessing.Pool(
     parallelism, initializer=func.setup
   ) as pool:
-    all_results = pool.imap_unordered(func, answerlist)
-    for index, results in tqdm(
-      enumerate(all_results), total=games
-    ):
-      if type(results) is str:
+    results = pool.imap_unordered(func, answerlist)
+    for index, result in tqdm(enumerate(results), total=games):
+      if type(result) is str:
         crashes.append(results)
       else:
-        wins[len(results) - 1] += 1
+        wins[len(result.tries) - 1] += 1
   stop = time()
 
   print(f"Regression test")
