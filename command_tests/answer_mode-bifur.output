@@ -1,0 +1,29 @@
+Building scoring table...
+Built scoring table in 1.930 seconds.
+Strategy: bifur
+
+List has 2315 words: cigar, rebut, sissy...
+Try: arise
+Score: x?xxx
+
+List has 64 words: forth, round, corny...
+Try: north
+Score: x!??x
+
+List has 4 words: motor, robot, court...
+Try: motor
+Score: x!?!?
+
+List has 1 words: robot
+Try: robot
+Score: !!!!!
+
+
+Jaydle 251 4/6
+
+⬛🟨⬛⬛⬛ 2315 words
+⬛🟩🟨🟨⬛ 64 words
+⬛🟩🟨🟩🟨 4 words
+🟩🟩🟩🟩🟩 1 word
+
+(Bot play)

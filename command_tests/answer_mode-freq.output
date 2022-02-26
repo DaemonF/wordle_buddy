@@ -1,0 +1,27 @@
+Strategy: freq
+
+List has 2315 words: cigar, rebut, sissy...
+Try: slate
+Score: xxx?x
+
+List has 86 words: outdo, digit, print...
+Try: touch
+Score: ?!xxx
+
+List has 7 words: motor, point, robot...
+Try: point
+Score: x!xx!
+
+List has 1 words: robot
+Try: robot
+Score: !!!!!
+
+
+Jaydle 251 4/6
+
+⬛⬛⬛🟨⬛ 2315 words
+🟨🟩⬛⬛⬛ 86 words
+⬛🟩⬛⬛🟩 7 words
+🟩🟩🟩🟩🟩 1 word
+
+(Bot play)

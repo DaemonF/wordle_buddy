@@ -1,0 +1,26 @@
+Showing wordlist and starting-word stats...
+
+By potential clue value:
+  alert (freq: 0.080, clues: 0.314, bifur: 11.811)
+  alter (freq: 0.085, clues: 0.309, bifur: 11.811)
+  later (freq: 0.089, clues: 0.306, bifur: 11.811)
+  renal (freq: 0.070, clues: 0.306, bifur: 10.920)
+  opera (freq: 0.043, clues: 0.303, bifur: 10.335)
+
+Enter a letter or word: t
+  Appears anywhere in word: 31.5%
+
+  Positional chance of green:
+    [  6.4% ][  3.3% ][  4.8% ][  6.0% ][ 10.9% ]
+  Positional chance of yellow:
+    [ 22.4% ][ 25.5% ][ 24.0% ][ 22.8% ][ 17.9% ]
+  Positional chance of gray:
+    [ 71.2% ][ 71.2% ][ 71.2% ][ 71.2% ][ 71.2% ]
+
+  Distribution of count per word it appears in:
+    90.9%,  9.0%,  0.1%,  0.0%,  0.0%
+
+Enter a letter or word: robot
+  robot (freq: 0.061, clues: 0.189, bifur: 3.680)
+
+Enter a letter or word: 

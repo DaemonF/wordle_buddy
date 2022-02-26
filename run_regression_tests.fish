@@ -1,12 +1,16 @@
 #!/usr/bin/env fish
 
-for game in {lewdle, wordle_hard, wordle}
-  for strat in {freq, clues, bifur}
-    set path regression_tests/$game-$strat.txt
-    echo "Running $path:"
+set games lewdle wordle_hard wordle
+set strategies freq clues bifur
+
+set dir regression_tests
+for game in $games
+  for strat in $strategies
+    set path $dir/$game-$strat.txt
+    echo "Running regression test $game-$strat..."
     ./wordle_buddy.py -t \
       --game=$game \
       --strategy=$strat \
-      > $path
+      > $dir/$game-$strat.txt
   end
 end

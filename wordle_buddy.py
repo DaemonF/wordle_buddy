@@ -461,22 +461,25 @@ class WordList(OrderedSet):
     )
 
 
-def show_stats_interactive(game, wordlist):
-  for strategy in Strategy:
-    print(f"By {strategy.description}:")
-    for guess in sorted(
-      wordlist,
-      key=lambda word: wordlist.grade(word, strategy),
-      reverse=True,
-    )[:5]:
-      print(f"  {Guess(guess, wordlist)}")
-    print()
+def show_stats_interactive(game, wordlist, strategy):
+  print(f"By {strategy.description}:")
+  for guess in sorted(
+    wordlist,
+    key=lambda word: wordlist.grade(word, strategy),
+    reverse=True,
+  )[:5]:
+    print(f"  {Guess(guess, wordlist)}")
+  print()
 
   while True:
     entry = input("Enter a letter or word: ")
+    if not sys.stdin.isatty():
+      print(entry)
     if entry == "":
       break
     elif len(entry) == 1:
+      if entry not in wordlist.stats:
+        print(f"ERROR: Invalid letter.")
       stats = wordlist.stats[entry]
 
       print(
@@ -554,9 +557,11 @@ def play_game(
 def play_game_interactive(game, wordlist, strategy):
   def scoring_func(guess):
     while True:
-      resp = input("What was the score? ")
-      if len(resp) == game.word_length:
-        return list(resp)
+      entry = input("What was the score? ")
+      if not sys.stdin.isatty():
+        print(entry)
+      if len(entry) == game.word_length:
+        return list(entry)
 
   return play_game(game, wordlist, strategy, scoring_func)
 
@@ -697,7 +702,7 @@ def _main(
   else:
     print("Showing wordlist and starting-word stats...")
     print()
-    show_stats_interactive(game, wordlist)
+    show_stats_interactive(game, wordlist, strategy)
 
 
 def main():
