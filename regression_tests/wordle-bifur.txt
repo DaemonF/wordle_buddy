@@ -1,5 +1,5 @@
 Building scoring table...
-Built scoring table in 1.756 seconds.
+Built scoring table in 1.757 seconds.
 Regression test
   List: 2315 words
   Games: 2315 games of Wordle
@@ -18,4 +18,4 @@ Stats of 2315 games:
       9    0    0.0%  100.0%
      10    0    0.0%  100.0%
 
-Total time: 221.948 seconds (parallelism: 6).
+Total time: 216.827 seconds (parallelism: 6).

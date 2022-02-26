@@ -1,28 +1,19 @@
 Building scoring table...
-Built scoring table in 1.804 seconds.
+Built scoring table in 1.782 seconds.
 Showing wordlist and starting-word stats...
 
 By maximum wordlist bifurcation:
-  arise (freq: 0.110, clues: 0.299, bifur: 13.780)
-  raise (freq: 0.110, clues: 0.299, bifur: 13.780)
-  alone (freq: 0.103, clues: 0.284, bifur: 12.720)
-  arose (freq: 0.108, clues: 0.301, bifur: 12.650)
-  atone (freq: 0.092, clues: 0.289, bifur: 12.120)
+  arise (freq: 0.000, clues: 0.000, bifur: 13.780)
+  raise (freq: 0.000, clues: 0.000, bifur: 13.780)
+  alone (freq: 0.000, clues: 0.000, bifur: 12.720)
+  arose (freq: 0.000, clues: 0.000, bifur: 12.650)
+  atone (freq: 0.000, clues: 0.000, bifur: 12.120)
 
 Enter a letter or word: t
-  Appears anywhere in word: 31.5%
 
-  Positional chance of green:
-    [  6.4% ][  3.3% ][  4.8% ][  6.0% ][ 10.9% ]
-  Positional chance of yellow:
-    [ 22.4% ][ 25.5% ][ 24.0% ][ 22.8% ][ 17.9% ]
-  Positional chance of gray:
-    [ 71.2% ][ 71.2% ][ 71.2% ][ 71.2% ][ 71.2% ]
-
-  Distribution of count per word it appears in:
-    90.9%,  9.0%,  0.1%,  0.0%,  0.0%
+  Strategy.BIFUR doesn't support letter stats.
 
 Enter a letter or word: robot
-  robot (freq: 0.061, clues: 0.189, bifur: 3.680)
+  robot (freq: 0.000, clues: 0.000, bifur: 3.680)
 
 Enter a letter or word: 

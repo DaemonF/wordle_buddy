@@ -257,49 +257,27 @@ class LetterStats:
 
 
 class WordList(OrderedSet):
-  def __init__(self, wordlist, game, scoring_table=None):
+  def __init__(
+    self, wordlist, game, strategy, scoring_table=None
+  ):
     super(WordList, self).__init__(wordlist)
     self.game = game
+    self.strategy = strategy
     self.scoring_table = scoring_table
 
+    self.stats = None
     self._score = [0 for _ in range(game.word_length)]
 
-    self.stats = {
-      letter: LetterStats(self.game) for letter in letters
-    }
-    for word in self:
-      # Track whether a given guess would be green, yellow, or gray for this word.
-      # TODO: This assumes all guesses are equally likely. Use wordlist?
-      for index, letter in enumerate(word):
-        for guess in letters:
-          stats = self.stats[guess]
-          if guess == letter:
-            stats.green_chance[index] += 1
-          elif guess in word:
-            stats.yellow_chance[index] += 1
-          else:
-            stats.gray_chance[index] += 1
-      # Track how often letters appear within a word.
-      for letter in set(word):
-        self.stats[letter].dupe_chance[
-          occurrences(word, letter) - 1
-        ] += 1
-
-    # Normalize
-    total_words = len(self)
-    for letter, stats in self.stats.items():
-      total_occurrences = sum(stats.dupe_chance) or 1
-      for index in range(self.game.word_length):
-        stats.green_chance[index] /= total_words
-        stats.yellow_chance[index] /= total_words
-        stats.gray_chance[index] /= total_words
-        stats.dupe_chance[index] /= total_occurrences
-      stats.freeze()
+    if strategy in (Strategy.FREQ, Strategy.CLUES):
+      self.build_stats()
+    elif strategy is Strategy.BIFUR and scoring_table is None:
+      self.build_scoring_table()
 
   def __getstate__(self):
     return (
       list(self),
       self.game,
+      self.strategy,
       self.scoring_table,
       self._score,
       self.stats,
@@ -310,6 +288,7 @@ class WordList(OrderedSet):
     (
       _,
       self.game,
+      self.strategy,
       self.scoring_table,
       self._score,
       self.stats,
@@ -347,6 +326,7 @@ class WordList(OrderedSet):
     return WordList(
       (word for word in self if f(word)),
       self.game,
+      self.strategy,
       self.scoring_table,
     )
 
@@ -364,6 +344,38 @@ class WordList(OrderedSet):
         self._score[index] = YELLOW
         answer[answer.index(letter)] = None
     return self._score
+
+  def build_stats(self):
+    self.stats = {
+      letter: LetterStats(self.game) for letter in letters
+    }
+    for word in self:
+      # Track whether a given guess would be green, yellow, or gray for this word.
+      for index, letter in enumerate(word):
+        for guess in letters:
+          stats = self.stats[guess]
+          if guess == letter:
+            stats.green_chance[index] += 1
+          elif guess in word:
+            stats.yellow_chance[index] += 1
+          else:
+            stats.gray_chance[index] += 1
+      # Track how often letters appear within a word.
+      for letter in set(word):
+        self.stats[letter].dupe_chance[
+          occurrences(word, letter) - 1
+        ] += 1
+
+    # Normalize
+    total_words = len(self)
+    for letter, stats in self.stats.items():
+      total_occurrences = sum(stats.dupe_chance) or 1
+      for index in range(self.game.word_length):
+        stats.green_chance[index] /= total_words
+        stats.yellow_chance[index] /= total_words
+        stats.gray_chance[index] /= total_words
+        stats.dupe_chance[index] /= total_occurrences
+      stats.freeze()
 
   @staticmethod
   def build_scoring_table_part(wordlist, word):
@@ -394,9 +406,13 @@ class WordList(OrderedSet):
       return self._grade_by_potential_clues(word)
     elif strategy is Strategy.BIFUR:
       return self._grade_by_bifurcation(word)
+    else:
+      assert False
 
   def _grade_by_frequency(self, word):
     """Grades a guess base on positional letter frequency in the wordlist."""
+    if self.stats is None:
+      return 0
     grade = 0
     for index, letter in enumerate(word):
       stats = self.stats[letter]
@@ -411,6 +427,8 @@ class WordList(OrderedSet):
 
   def _grade_by_potential_clues(self, word):
     """Grades a guess by how many potential clues it could give based on the wordlist."""
+    if self.stats is None:
+      return 0
     grade = 0
     for index, letter in enumerate(word):
       stats = self.stats[letter]
@@ -483,23 +501,28 @@ def show_stats_interactive(game, wordlist, strategy):
     if entry == "":
       break
     elif len(entry) == 1:
-      if entry not in wordlist.stats:
+      if entry not in letters:
         print(f"ERROR: Invalid letter.")
-      stats = wordlist.stats[entry]
-
-      print(
-        f"  Appears anywhere in word: {fmt_perc(sum(stats.green_chance))}"
-      )
-      print()
-      print("  Positional chance of green:")
-      print(f"    {fmt_blocks(stats.green_chance)}")
-      print("  Positional chance of yellow:")
-      print(f"    {fmt_blocks(stats.yellow_chance)}")
-      print("  Positional chance of gray:")
-      print(f"    {fmt_blocks(stats.gray_chance)}")
-      print()
-      print("  Distribution of count per word it appears in:")
-      print(f"    {fmt_stats(stats.dupe_chance)}")
+      if strategy in (Strategy.FREQ, Strategy.CLUES):
+        stats = wordlist.stats[entry]
+        print(
+          f"  Appears anywhere in word: {fmt_perc(sum(stats.green_chance))}"
+        )
+        print()
+        print("  Positional chance of green:")
+        print(f"    {fmt_blocks(stats.green_chance)}")
+        print("  Positional chance of yellow:")
+        print(f"    {fmt_blocks(stats.yellow_chance)}")
+        print("  Positional chance of gray:")
+        print(f"    {fmt_blocks(stats.gray_chance)}")
+        print()
+        print("  Distribution of count per word it appears in:")
+        print(f"    {fmt_stats(stats.dupe_chance)}")
+      elif strategy is Strategy.BIFUR:
+        print()
+        print("  Strategy.BIFUR doesn't support letter stats.")
+      else:
+        assert False
     elif len(entry) == game.word_length:
       print(f"  {Guess(entry, wordlist)}")
       if entry not in wordlist:
@@ -673,6 +696,7 @@ def _main(
         if len(entry) == game.word_length
       ),
       game,
+      strategy,
     )
 
   answerlist = None
@@ -683,11 +707,6 @@ def _main(
         for entry in (line.strip() for line in f.readlines())
         if len(entry) == game.word_length
       ]
-
-  if strategy is Strategy.BIFUR:
-    # TODO: Currently, this massively slows down the other strategies, which is
-    # unexpexcted. It seems related to the use of Multiprocessing. Investigate.
-    wordlist.build_scoring_table()
 
   if mode == "test":
     regression_test(
