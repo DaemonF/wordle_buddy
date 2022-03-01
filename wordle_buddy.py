@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+# cython: language_level=3
+# distutils: language = c++
 
 import cProfile as profile
 import multiprocessing
 import pickle
 import os
+import subprocess
 import sys
 
 from argparse import ArgumentParser, BooleanOptionalAction
@@ -754,6 +757,7 @@ def main():
   )
   parser.add_argument("--dict_file", default=None)
   parser.add_argument("--profile", action=BooleanOptionalAction)
+  parser.add_argument("--cython", action=BooleanOptionalAction)
 
   # Play game with known answer.
   parser.add_argument("--answer")
@@ -771,6 +775,17 @@ def main():
   parser.add_argument("--answer_file", default=None)
 
   args = parser.parse_args()
+  if args.cython and __name__ == "__main__":
+    subprocess.run(
+      ["cythonize", "-i", "-a", "wordle_buddy.py"],
+      stdout=sys.stderr,
+    )
+    from wordle_buddy import main
+
+    # It is critical to reparse args within the compiled version
+    # to avoid duplicate definition issues, such as with enums.
+    return main()
+
   with ExitStack() as stack:
     if args.profile:
       global multiprocessing

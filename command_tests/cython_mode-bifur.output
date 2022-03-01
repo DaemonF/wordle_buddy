@@ -1,0 +1,25 @@
+Building scoring table...
+Built scoring table in 1.234 seconds.
+Strategy: bifur
+
+List has 41 words: colon, heron, baton...
+Try: arson
+Score: xxx!?
+
+List has 6 words: enjoy, venom, envoy...
+Try: enjoy
+Score: x!x!x
+
+List has 2 words: ingot, inbox
+Try: ingot
+Score: !!!!!
+
+
+Hermetic testing 0 3/6**
+
+⬛⬛⬛🟩🟨 41 words
+⬛🟩⬛🟩⬛ 6 words
+🟩🟩🟩🟩🟩 2 words
+
+(Bot play for testing)
+

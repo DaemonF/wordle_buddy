@@ -39,4 +39,10 @@ for strat in $strategies
     $common_args \
     > $dir/profile_mode-$strat.output \
     || exit
+
+  echo "Checking cython mode $strat..."
+  ./wordle_buddy.py --answer ingot --cython \
+    $common_args \
+    > $dir/cython_mode-$strat.output \
+    || exit
 end

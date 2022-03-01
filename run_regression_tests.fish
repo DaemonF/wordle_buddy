@@ -9,6 +9,7 @@ for game in $games
     set path $dir/$game-$strat.txt
     echo "Running regression test $game-$strat..."
     ./wordle_buddy.py -t \
+      --cython \
       --game=$game \
       --strategy=$strat \
       > $dir/$game-$strat.txt
