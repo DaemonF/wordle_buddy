@@ -319,9 +319,14 @@ class WordList(OrderedSet):
     """Returns a new WordList by removing all incompatible words from this wordlist."""
     f = lambda word: True
     for i, (g, s) in enumerate(zip(guess, score)):
-      if s == GREEN:
-        f = lambda word, i=i, g=g, f=f: (
-          word[i] == g and f(word)
+      if s == GRAY:
+        count = sum(
+          1
+          for g2, s2 in zip(guess, score)
+          if g2 == g and s2 != GRAY
+        )
+        f = lambda word, i=i, g=g, c=count, f=f: (
+          word[i] != g and f(word) and occurrences(word, g) <= c
         )
       elif s == YELLOW:
         count = sum(
@@ -332,17 +337,10 @@ class WordList(OrderedSet):
         f = lambda word, i=i, g=g, c=count, f=f: (
           word[i] != g and f(word) and occurrences(word, g) >= c
         )
-
-      elif s == GRAY:
-        count = sum(
-          1
-          for g2, s2 in zip(guess, score)
-          if g2 == g and s2 != GRAY
+      elif s == GREEN:
+        f = lambda word, i=i, g=g, f=f: (
+          word[i] == g and f(word)
         )
-        f = lambda word, i=i, g=g, c=count, f=f: (
-          word[i] != g and f(word) and occurrences(word, g) <= c
-        )
-
       else:
         assert False
 
