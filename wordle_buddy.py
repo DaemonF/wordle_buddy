@@ -390,11 +390,11 @@ class WordList(OrderedSet):
     print(f"Built scoring table in {stop - start:.3f} seconds.")
 
   def grade(self, word, strategy: Strategy):
-    if strategy == Strategy.FREQ:
+    if strategy is Strategy.FREQ:
       return self._grade_by_frequency(word)
-    elif strategy == Strategy.CLUES:
+    elif strategy is Strategy.CLUES:
       return self._grade_by_potential_clues(word)
-    elif strategy == Strategy.BIFUR:
+    elif strategy is Strategy.BIFUR:
       return self._grade_by_bifurcation(word)
 
   def _grade_by_frequency(self, word):
@@ -686,7 +686,7 @@ def _main(
         if len(entry) == game.word_length
       ]
 
-  if strategy == Strategy.BIFUR:
+  if strategy is Strategy.BIFUR:
     # TODO: Currently, this massively slows down the other strategies, which is
     # unexpexcted. It seems related to the use of Multiprocessing. Investigate.
     wordlist.build_scoring_table()
