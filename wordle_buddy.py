@@ -613,7 +613,7 @@ def regression_test_case(wordlist, strategy, answer):
     return play_game_with_answer(
       wordlist.game, wordlist, strategy, answer, quiet=True
     )
-  except:
+  except Exception as e:
     return answer
 
 
