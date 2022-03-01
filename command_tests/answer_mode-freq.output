@@ -1,28 +1,23 @@
 Strategy: freq
 
-List has 2315 words: cigar, rebut, sissy...
-Try: slate
-Score: xxx?x
+List has 41 words: colon, heron, baton...
+Try: salon
+Score: x!x!?
 
-List has 86 words: outdo, digit, print...
-Try: touch
-Score: ?!xxx
+List has 2 words: manor, canoe
+Try: manor
+Score: x!!!x
 
-List has 7 words: motor, point, robot...
-Try: point
-Score: x!xx!
-
-List has 1 words: robot
-Try: robot
+List has 1 words: canoe
+Try: canoe
 Score: !!!!!
 
 
-Jaydle 254 4/6
+Hermetic testing 0 3/6**
 
-⬛⬛⬛🟨⬛ 2315 words
-🟨🟩⬛⬛⬛ 86 words
-⬛🟩⬛⬛🟩 7 words
+⬛🟩⬛🟩🟨 41 words
+⬛🟩🟩🟩⬛ 2 words
 🟩🟩🟩🟩🟩 1 word
 
-(Bot play)
+(Bot play for testing)
 

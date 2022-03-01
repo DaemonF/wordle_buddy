@@ -1,26 +1,27 @@
 Showing wordlist and starting-word stats...
 
 By potential clue value:
-  alert (freq: 0.080, clues: 0.314, bifur: 11.811)
-  alter (freq: 0.085, clues: 0.309, bifur: 11.811)
-  later (freq: 0.089, clues: 0.306, bifur: 11.811)
-  renal (freq: 0.070, clues: 0.306, bifur: 10.920)
-  opera (freq: 0.043, clues: 0.303, bifur: 10.335)
+  arson (freq: 0.366, clues: 0.227, bifur: 5.125)
+  rayon (freq: 0.390, clues: 0.215, bifur: 3.727)
+  mason (freq: 0.420, clues: 0.211, bifur: 5.125)
+  salon (freq: 0.439, clues: 0.208, bifur: 4.100)
+  baron (freq: 0.420, clues: 0.206, bifur: 3.727)
 
 Enter a letter or word: t
-  Appears anywhere in word: 31.5%
+  Appears anywhere in word:  9.8%
 
   Positional chance of green:
-    [  6.4% ][  3.3% ][  4.8% ][  6.0% ][ 10.9% ]
+    [  4.9% ][  0.0% ][  2.4% ][  0.0% ][  2.4% ]
   Positional chance of yellow:
-    [ 22.4% ][ 25.5% ][ 24.0% ][ 22.8% ][ 17.9% ]
+    [  4.9% ][  9.8% ][  7.3% ][  9.8% ][  7.3% ]
   Positional chance of gray:
-    [ 71.2% ][ 71.2% ][ 71.2% ][ 71.2% ][ 71.2% ]
+    [ 90.2% ][ 90.2% ][ 90.2% ][ 90.2% ][ 90.2% ]
 
   Distribution of count per word it appears in:
-    90.9%,  9.0%,  0.1%,  0.0%,  0.0%
+    100.0%,  0.0%,  0.0%,  0.0%,  0.0%
 
 Enter a letter or word: robot
-  robot (freq: 0.061, clues: 0.189, bifur: 3.680)
+  robot (freq: 0.063, clues: 0.103, bifur: 2.103)
+  Note: Not in wordlist.
 
 Enter a letter or word: 

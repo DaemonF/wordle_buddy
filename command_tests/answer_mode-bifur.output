@@ -1,30 +1,20 @@
 Building scoring table...
-Built scoring table in 1.808 seconds.
+Built scoring table in 1.234 seconds.
 Strategy: bifur
 
-List has 2315 words: cigar, rebut, sissy...
-Try: arise
-Score: x?xxx
+List has 41 words: colon, heron, baton...
+Try: arson
+Score: ?xx!?
 
-List has 64 words: forth, round, corny...
-Try: north
-Score: x!??x
-
-List has 4 words: motor, robot, court...
-Try: motor
-Score: x!?!?
-
-List has 1 words: robot
-Try: robot
+List has 1 words: canoe
+Try: canoe
 Score: !!!!!
 
 
-Jaydle 254 4/6
+Hermetic testing 0 2/6**
 
-⬛🟨⬛⬛⬛ 2315 words
-⬛🟩🟨🟨⬛ 64 words
-⬛🟩🟨🟩🟨 4 words
+🟨⬛⬛🟩🟨 41 words
 🟩🟩🟩🟩🟩 1 word
 
-(Bot play)
+(Bot play for testing)
 

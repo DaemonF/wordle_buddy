@@ -1,0 +1,19 @@
+Strategy: freq
+
+List has 41 words: colon, heron, baton...
+Try: salon
+Score: ?!x!!
+
+List has 1 words: mason
+Try: mason
+Score: !!!!!
+
+
+Hermetic testing 0 2/6**
+
+🟨🟩⬛🟩🟩 41 words
+🟩🟩🟩🟩🟩 1 word
+
+(Bot play for testing)
+
+	Collected profile successfully. Supressing non-hermetic output.

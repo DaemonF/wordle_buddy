@@ -1,26 +1,27 @@
 Showing wordlist and starting-word stats...
 
 By positional letter frequency:
-  slate (freq: 0.124, clues: 0.284, bifur: 10.475)
-  sauce (freq: 0.122, clues: 0.254, bifur: 9.372)
-  slice (freq: 0.122, clues: 0.251, bifur: 7.928)
-  shale (freq: 0.121, clues: 0.263, bifur: 9.606)
-  saute (freq: 0.121, clues: 0.271, bifur: 10.381)
+  salon (freq: 0.439, clues: 0.208, bifur: 4.100)
+  mason (freq: 0.420, clues: 0.211, bifur: 5.125)
+  baron (freq: 0.420, clues: 0.206, bifur: 3.727)
+  talon (freq: 0.420, clues: 0.187, bifur: 4.100)
+  melon (freq: 0.415, clues: 0.188, bifur: 2.733)
 
 Enter a letter or word: t
-  Appears anywhere in word: 31.5%
+  Appears anywhere in word:  9.8%
 
   Positional chance of green:
-    [  6.4% ][  3.3% ][  4.8% ][  6.0% ][ 10.9% ]
+    [  4.9% ][  0.0% ][  2.4% ][  0.0% ][  2.4% ]
   Positional chance of yellow:
-    [ 22.4% ][ 25.5% ][ 24.0% ][ 22.8% ][ 17.9% ]
+    [  4.9% ][  9.8% ][  7.3% ][  9.8% ][  7.3% ]
   Positional chance of gray:
-    [ 71.2% ][ 71.2% ][ 71.2% ][ 71.2% ][ 71.2% ]
+    [ 90.2% ][ 90.2% ][ 90.2% ][ 90.2% ][ 90.2% ]
 
   Distribution of count per word it appears in:
-    90.9%,  9.0%,  0.1%,  0.0%,  0.0%
+    100.0%,  0.0%,  0.0%,  0.0%,  0.0%
 
 Enter a letter or word: robot
-  robot (freq: 0.061, clues: 0.189, bifur: 3.680)
+  robot (freq: 0.063, clues: 0.103, bifur: 2.103)
+  Note: Not in wordlist.
 
 Enter a letter or word: 

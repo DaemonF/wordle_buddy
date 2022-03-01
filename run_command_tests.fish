@@ -4,7 +4,9 @@ set strategies freq clues bifur
 
 set dir command_tests
 for strat in $strategies
-  set common_args --strategy=$strat
+  set common_args \
+    --game=hermetic \
+    --strategy=$strat
 
   echo "Checking default mode $strat..."
   ./wordle_buddy.py \
@@ -16,19 +18,25 @@ for strat in $strategies
   echo "Checking interactive mode $strat..."
   ./wordle_buddy.py -i \
     $common_args \
-    < $dir/interactive_mode.input \
+    < $dir/interactive_mode-$strat.input \
     > $dir/interactive_mode-$strat.output \
     || exit
 
   echo "Checking answer mode $strat..."
-  ./wordle_buddy.py --answer robot \
+  ./wordle_buddy.py --answer canoe \
     $common_args \
     > $dir/answer_mode-$strat.output \
     || exit
 
   echo "Checking test mode $strat..."
-  ./wordle_buddy.py -t --sampling=99999 \
+  ./wordle_buddy.py -t --sampling 2 \
     $common_args \
     > $dir/test_mode-$strat.output \
+    || exit
+
+  echo "Checking profile mode $strat..."
+  ./wordle_buddy.py --answer mason --profile \
+    $common_args \
+    > $dir/profile_mode-$strat.output \
     || exit
 end

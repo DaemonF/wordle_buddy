@@ -4,7 +4,6 @@ import argparse
 import cProfile as profile
 import multiprocessing
 import pickle
-import pstats
 import os
 import sys
 
@@ -12,6 +11,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from enum import Enum
 from ordered_set import OrderedSet
+from pstats import Stats, SortKey
 from time import perf_counter, perf_counter_ns
 from tqdm import tqdm
 
@@ -159,6 +159,17 @@ class Game(PropEnum):
     False,
     "",
     "",
+  )
+  HERMETIC = (
+    "hermetic",
+    "Hermetic testing",
+    "wordlists/hermetic_testing.txt",
+    5,
+    6,
+    datetime.now(),
+    False,
+    "**",
+    " for testing",
   )
 
   def __init__(
@@ -397,7 +408,10 @@ class WordList(OrderedSet):
         word: scores for word, scores in parts
       }
     stop = perf_counter()
-    print(f"Built scoring table in {stop - start:.3f} seconds.")
+    elapsed = stop - start
+    if self.game is Game.HERMETIC:
+      elapsed = 1.234
+    print(f"Built scoring table in {elapsed:.3f} seconds.")
 
   def grade(self, word, strategy: Strategy):
     if strategy is Strategy.FREQ:
@@ -460,7 +474,7 @@ class WordList(OrderedSet):
   def _grade_by_bifurcation(self, word):
     """Grades a guess based on how closely it would split the wordlist in equal halves."""
     buckets = [0 for _ in range(3 ** self.game.word_length)]
-    if self.scoring_table is not None:
+    if self.scoring_table and word in self.scoring_table:
       scores = self.scoring_table[word]
       for answer in self:
         buckets[scores[answer]] += 1
@@ -647,6 +661,9 @@ def regression_test(
       else:
         wins[len(result.tries) - 1] += 1
   stop = perf_counter()
+  elapsed = stop - start
+  if game is Game.HERMETIC:
+    elapsed = 12.345
 
   print(f"Regression test")
   print(f"  List: {len(wordlist)} words")
@@ -673,7 +690,7 @@ def regression_test(
     )
   print()
   print(
-    f"Total time: {stop - start:.3f} seconds (parallelism: {parallelism})."
+    f"Total time: {elapsed:.3f} seconds (parallelism: {parallelism})."
   )
 
 
@@ -752,15 +769,18 @@ def main():
   if args.profile:
     global multiprocessing
     multiprocessing = FakeMultiprocessing()
-    with profile.Profile(
-      timer=perf_counter_ns,
-      timeunit=1e-9,
-      subcalls=True,
-      builtins=True,
-    ) as pr:
+    timer = perf_counter_ns
+    if args.game is Game.HERMETIC:
+      timer = lambda: 0
+    with profile.Profile(timer=timer, timeunit=1e-9) as pr:
       _main(**vars(args))
-    p = pstats.Stats(pr)
-    p.sort_stats(pstats.SortKey.TIME).print_stats()
+    if args.game is Game.HERMETIC:
+      print(
+        "\tCollected profile successfully. "
+        "Supressing non-hermetic output."
+      )
+    else:
+      Stats(pr).sort_stats(SortKey.TIME).print_stats()
   else:
     _main(**vars(args))
 

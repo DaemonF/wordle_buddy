@@ -4,17 +4,18 @@ Strategy: bifur
 
 List has 41 words: colon, heron, baton...
 Try: arson
-What was the score? xxxxx
+Score: ?x!!!
 
-List has 0 words: 
-Try: colon
-What was the score? !!!!!
+List has 1 words: mason
+Try: mason
+Score: !!!!!
 
 
 Hermetic testing 0 2/6**
 
-⬛⬛⬛⬛⬛ 41 words
-🟩🟩🟩🟩🟩 0 words
+🟨⬛🟩🟩🟩 41 words
+🟩🟩🟩🟩🟩 1 word
 
 (Bot play for testing)
 
+	Collected profile successfully. Supressing non-hermetic output.

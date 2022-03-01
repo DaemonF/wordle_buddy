@@ -2,17 +2,18 @@ Strategy: clues
 
 List has 41 words: colon, heron, baton...
 Try: arson
-Score: ?xx!?
+Score: ?x!!!
 
-List has 1 words: canoe
-Try: canoe
+List has 1 words: mason
+Try: mason
 Score: !!!!!
 
 
 Hermetic testing 0 2/6**
 
-🟨⬛⬛🟩🟨 41 words
+🟨⬛🟩🟩🟩 41 words
 🟩🟩🟩🟩🟩 1 word
 
 (Bot play for testing)
 
+	Collected profile successfully. Supressing non-hermetic output.
