@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from enum import Enum
 from ordered_set import OrderedSet
-from time import time, perf_counter_ns
+from time import perf_counter, perf_counter_ns
 from tqdm import tqdm
 
 
@@ -389,14 +389,14 @@ class WordList(OrderedSet):
 
   def build_scoring_table(self):
     print("Building scoring table...")
-    start = time()
+    start = perf_counter()
     func = PoolFunc(self.build_scoring_table_part).partial(self)
     with multiprocessing.Pool(initializer=func.setup) as pool:
       parts = pool.imap_unordered(func, self, chunksize=20)
       self.scoring_table = {
         word: scores for word, scores in parts
       }
-    stop = time()
+    stop = perf_counter()
     print(f"Built scoring table in {stop - start:.3f} seconds.")
 
   def grade(self, word, strategy: Strategy):
@@ -632,7 +632,7 @@ def regression_test(
   wins = [0 for _ in range(10)]
   crashes = []
 
-  start = time()
+  start = perf_counter()
   func = PoolFunc(regression_test_case).partial(
     wordlist, strategy
   )
@@ -646,7 +646,7 @@ def regression_test(
         crashes.append(results)
       else:
         wins[len(result.tries) - 1] += 1
-  stop = time()
+  stop = perf_counter()
 
   print(f"Regression test")
   print(f"  List: {len(wordlist)} words")
