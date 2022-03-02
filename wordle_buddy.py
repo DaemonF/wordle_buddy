@@ -431,12 +431,13 @@ class WordList(OrderedSet):
       stats = self.stats[letter]
       grade += (
         stats.green_chance[index]
-        * self._dupe_modifier(word, index, letter, stats)
+        * self._dupe_modifier(word[:index], letter, stats)
       ) / self.game.word_length
 
-    # For hard mode, make words in the wordlist slightly more attractive.
-    modifier = -0.01 if word not in self else 0
-    return grade + modifier
+    # Make words outside the wordlist slightly less attractive.
+    if not (self.game.hard_mode or word in self):
+      grade -= 0.01
+    return grade
 
   def _grade_by_potential_clues(self, word):
     """Grades a guess by how many potential clues it could give based on the wordlist."""
@@ -445,17 +446,19 @@ class WordList(OrderedSet):
     grade = 0
     for index, letter in enumerate(word):
       stats = self.stats[letter]
-      # The number of words that would make this guess green, yellow, or gray.
+      prefix = word[:index]
+
+      # The number of words that would give this letter each score.
       greens = stats.green_chance[index]
-      yellows = stats.yellow_chance[index]
-      grays = stats.gray_chance[index]
-
-      # In Wordle, duplicate letters only count as yellow if the answer has the same or more duplicates. Model that.
-      yellows *= self._dupe_modifier(word, index, letter, stats)
+      # In Wordle, duplicate letters only count as yellow if the
+      # answer has the same or more duplicates. Model that.
+      yellows = stats.yellow_chance[index] * self._dupe_modifier(
+        prefix, letter, stats
+      )
       # Only the first gray for a given letter matters.
-      grays *= 1 if word.index(letter) == index else 0
+      grays = 0 if letter in prefix else stats.gray_chance[index]
 
-      # Weight each category by how much it would split up the wordlist.
+      # Weight each group by how it would split up the wordlist.
       green_weight = 0.5 - abs(0.5 - greens)
       yellow_weight = 0.5 - abs(0.5 - yellows)
       gray_weight = 0.5 - abs(0.5 - grays)
@@ -466,9 +469,10 @@ class WordList(OrderedSet):
         + grays * gray_weight
       ) / self.game.word_length
 
-    # For hard mode, make words in the wordlist slightly more attractive.
-    modifier = -0.01 if word not in self else 0
-    return grade + modifier
+    # Make words outside the wordlist slightly less attractive.
+    if not (self.game.hard_mode or word in self):
+      grade -= 0.01
+    return grade
 
   def _grade_by_bifurcation(self, word):
     """Grades a guess based on how closely it would split the wordlist in equal halves."""
@@ -481,18 +485,18 @@ class WordList(OrderedSet):
       guess = Guess(word, self)
       for answer in self:
         buckets[inds(self._compute_score(word, answer))] += 1
+    biggest_bucket = max(buckets)
 
-    # For hard mode, make words in the wordlist slightly more attractive.
-    modifier = 0.5 if word not in self else 0
-    return len(self) / (max(buckets) + modifier)
+    # Make words outside the wordlist slightly less attractive.
+    if not (self.game.hard_mode or word in self):
+      biggest_bucket += 0.5
+    return len(self) / biggest_bucket
 
-  def _dupe_modifier(self, word, index, letter, stats):
+  def _dupe_modifier(self, prefix, letter, stats):
     """If the Guess contains duplicate letters, discount later occurrences based on the dupe chance."""
-    return (
-      1
-      if word.index(letter) == index
-      else sum(stats.dupe_chance[word[:index].count(letter) :])
-    )
+    if letter not in prefix:
+      return 1
+    return sum(stats.dupe_chance[prefix.count(letter) :])
 
 
 def show_stats_interactive(game, wordlist, strategy):
