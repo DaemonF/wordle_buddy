@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-import argparse
 import cProfile as profile
 import multiprocessing
 import pickle
 import os
 import sys
 
-from contextlib import contextmanager
+from argparse import ArgumentParser, BooleanOptionalAction
+from contextlib import contextmanager, ExitStack
 from datetime import datetime
 from enum import Enum
 from ordered_set import OrderedSet
@@ -694,16 +694,16 @@ def regression_test(
   )
 
 
-def _main(
+def run_wordle_buddy(
   *,
   game,
   strategy,
   dict_file,
-  profile,
   answer,
   mode,
   sampling,
   answer_file,
+  **kwargs,
 ):
   with open(dict_file or game.default_dict_file, "r") as f:
     wordlist = WordList(
@@ -740,15 +740,13 @@ def _main(
 
 
 def main():
-  parser = argparse.ArgumentParser()
+  parser = ArgumentParser()
   parser.add_argument("--game", default="jaydle", type=Game)
   parser.add_argument(
     "--strategy", default="bifur", type=Strategy
   )
   parser.add_argument("--dict_file", default=None)
-  parser.add_argument(
-    "--profile", action=argparse.BooleanOptionalAction
-  )
+  parser.add_argument("--profile", action=BooleanOptionalAction)
 
   # Play game with known answer.
   parser.add_argument("--answer")
@@ -766,14 +764,20 @@ def main():
   parser.add_argument("--answer_file", default=None)
 
   args = parser.parse_args()
+  with ExitStack() as stack:
+    if args.profile:
+      global multiprocessing
+      multiprocessing = FakeMultiprocessing()
+      timer = perf_counter_ns
+      if args.game is Game.HERMETIC:
+        timer = lambda: 0
+      pr = stack.enter_context(
+        profile.Profile(timer=timer, timeunit=1e-9)
+      )
+
+    run_wordle_buddy(**vars(args))
+
   if args.profile:
-    global multiprocessing
-    multiprocessing = FakeMultiprocessing()
-    timer = perf_counter_ns
-    if args.game is Game.HERMETIC:
-      timer = lambda: 0
-    with profile.Profile(timer=timer, timeunit=1e-9) as pr:
-      _main(**vars(args))
     if args.game is Game.HERMETIC:
       print(
         "\tCollected profile successfully. "
@@ -781,8 +785,6 @@ def main():
       )
     else:
       Stats(pr).sort_stats(SortKey.TIME).print_stats()
-  else:
-    _main(**vars(args))
 
 
 if __name__ == "__main__":
