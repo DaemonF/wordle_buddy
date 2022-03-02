@@ -338,6 +338,9 @@ class WordList(OrderedSet):
     )
 
   def compute_score(self, guess, answer):
+    return tuple(self._compute_score(guess, answer))
+
+  def _compute_score(self, guess, answer):
     """WARNING: Return value is mutable for performance reasons. Must use or copy before calling this method again."""
     answer = list(answer)
     for index, letter in enumerate(guess):
@@ -389,7 +392,7 @@ class WordList(OrderedSet):
     return (
       word,
       {
-        answer: inds(wordlist.compute_score(word, answer))
+        answer: inds(wordlist._compute_score(word, answer))
         for answer in wordlist
       },
     )
@@ -477,7 +480,7 @@ class WordList(OrderedSet):
     else:
       guess = Guess(word, self)
       for answer in self:
-        buckets[inds(self.compute_score(word, answer))] += 1
+        buckets[inds(self._compute_score(word, answer))] += 1
 
     # For hard mode, make words in the wordlist slightly more attractive.
     modifier = 0.5 if word not in self else 0
@@ -572,7 +575,7 @@ def play_game(
       print(f"Try: {guess}")
 
     score = scoring_func(guess)
-    tries.append(Score(tuple(score), wordlist))
+    tries.append(Score(score, wordlist))
     if score.count(GREEN) == game.word_length:
       break
 
