@@ -39,10 +39,6 @@ def inds(score):
   return i
 
 
-def occurrences(word, letter):
-  return sum(1 for l in word if l == letter)
-
-
 def fmt_real(stat):
   return f"{stat: >5.3f}"
 
@@ -316,7 +312,7 @@ class WordList(OrderedSet):
           if g2 == g and s2 != GRAY
         )
         f = lambda word, i=i, g=g, c=count, f=f: (
-          word[i] != g and f(word) and occurrences(word, g) <= c
+          word[i] != g and f(word) and word.count(g) <= c
         )
       elif s == YELLOW:
         count = sum(
@@ -325,7 +321,7 @@ class WordList(OrderedSet):
           if g2 == g and s2 != GRAY
         )
         f = lambda word, i=i, g=g, c=count, f=f: (
-          word[i] != g and f(word) and occurrences(word, g) >= c
+          word[i] != g and f(word) and word.count(g) >= c
         )
       elif s == GREEN:
         f = lambda word, i=i, g=g, f=f: (
@@ -374,18 +370,18 @@ class WordList(OrderedSet):
       # Track how often letters appear within a word.
       for letter in set(word):
         self.stats[letter].dupe_chance[
-          occurrences(word, letter) - 1
+          word.count(letter) - 1
         ] += 1
 
     # Normalize
     total_words = len(self)
     for letter, stats in self.stats.items():
-      total_occurrences = sum(stats.dupe_chance) or 1
+      total_count = sum(stats.dupe_chance) or 1
       for index in range(self.game.word_length):
         stats.green_chance[index] /= total_words
         stats.yellow_chance[index] /= total_words
         stats.gray_chance[index] /= total_words
-        stats.dupe_chance[index] /= total_occurrences
+        stats.dupe_chance[index] /= total_count
       stats.freeze()
 
   @staticmethod
@@ -492,9 +488,7 @@ class WordList(OrderedSet):
     return (
       1
       if word.index(letter) == index
-      else sum(
-        stats.dupe_chance[occurrences(word[:index], letter) :]
-      )
+      else sum(stats.dupe_chance[word[:index].count(letter) :])
     )
 
 
@@ -579,7 +573,7 @@ def play_game(
 
     score = scoring_func(guess)
     tries.append(Score(tuple(score), wordlist))
-    if occurrences(score, GREEN) == game.word_length:
+    if score.count(GREEN) == game.word_length:
       break
 
     wordlist = wordlist.sublist(guess, score)
