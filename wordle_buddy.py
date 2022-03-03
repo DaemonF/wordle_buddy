@@ -263,10 +263,10 @@ class Guess:
 
 class LetterStats:
   def __init__(self, game):
-    self.green_chance = [0 for _ in range(game.word_length)]
-    self.yellow_chance = [0 for _ in range(game.word_length)]
-    self.gray_chance = [0 for _ in range(game.word_length)]
-    self.dupe_chance = [0 for _ in range(game.word_length)]
+    self.green_chance = [0] * game.word_length
+    self.yellow_chance = [0] * game.word_length
+    self.gray_chance = [0] * game.word_length
+    self.dupe_chance = [0] * game.word_length
 
   def freeze(self):
     self.green_chance = tuple(self.green_chance)
@@ -285,11 +285,11 @@ class WordList(OrderedSet):
     self.scoring_table = scoring_table
 
     self.stats = None
-    self._score = [0 for _ in range(game.word_length)]
+    self._score = [0] * game.word_length
 
     if strategy in (Strategy.FREQ, Strategy.CLUES):
       self.build_stats()
-    elif strategy is Strategy.BIFUR and scoring_table is None:
+    elif strategy is Strategy.BIFUR and not scoring_table:
       self.build_scoring_table()
 
   def __getstate__(self):
@@ -438,7 +438,7 @@ class WordList(OrderedSet):
   def _grade_by_frequency(self, word):
     """Grades a guess base on positional letter frequency in
     the wordlist."""
-    if self.stats is None:
+    if not self.stats:
       return 0
     grade = 0
     for index, letter in enumerate(word):
@@ -456,7 +456,7 @@ class WordList(OrderedSet):
   def _grade_by_potential_clues(self, word):
     """Grades a guess by how many potential clues it could give
     based on the wordlist."""
-    if self.stats is None:
+    if not self.stats:
       return 0
     grade = 0
     for index, letter in enumerate(word):
@@ -492,7 +492,7 @@ class WordList(OrderedSet):
   def _grade_by_bifurcation(self, word):
     """Grades a guess based on how closely it would split the
     wordlist in equal halves."""
-    buckets = [0 for _ in range(3 ** self.game.word_length)]
+    buckets = [0] * (3 ** self.game.word_length)
     if self.scoring_table and word in self.scoring_table:
       scores = self.scoring_table[word]
       for answer in self:
@@ -659,7 +659,7 @@ def regression_test(
     ]
 
   games = len(answerlist)
-  wins = [0 for _ in range(10)]
+  wins = [0] * 10
   crashes = []
 
   start = perf_counter()
@@ -689,7 +689,7 @@ def regression_test(
     f"\n"
     f"Stats of {games} games:"
   )
-  if len(crashes) > 0:
+  if crashes:
     print(
       f"  Crashes: {len(crashes)} {len(crashes) / games:.2%}"
     )
@@ -733,7 +733,7 @@ def run_wordle_buddy(
     )
 
   answerlist = None
-  if answer_file is not None:
+  if answer_file:
     with open(answer_file, "r") as f:
       answerlist = [
         entry
@@ -747,7 +747,7 @@ def run_wordle_buddy(
     )
   elif mode == "interactive":
     play_game_interactive(game, wordlist, strategy)
-  elif answer is not None:
+  elif answer:
     play_game_with_answer(game, wordlist, strategy, answer)
   else:
     print("Showing wordlist and starting-word stats...\n")
