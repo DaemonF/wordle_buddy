@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # cython: language_level=3
-# distutils: language = c++
+# distutils: language=c++
 
 import cProfile as profile
+import cython as c
 import multiprocessing
 import pickle
 import os
@@ -775,10 +776,11 @@ def main():
   parser.add_argument("--answer_file", default=None)
 
   args = parser.parse_args()
-  if args.cython and __name__ == "__main__":
+  if not c.compiled and args.cython:
     subprocess.run(
       ["cythonize", "-i", "-a", "wordle_buddy.py"],
       stdout=sys.stderr,
+      check=True,
     )
     from wordle_buddy import main
 
