@@ -1,21 +1,23 @@
 Building scoring table...
 Built scoring table in 1.234 seconds.
-Regression test
-  List: 41 words
-  Games: 21 games of Hermetic testing (sampling: 1/2)
-  Strategy: bifur
+Test details:
+  Games:     playing 21 games of Hermetic testing
+  Sampling:  playing 1/2 of all possible games
+  Guesslist: starting with 41 potential words
+  Strategy:  guessing based on maximum wordlist bifurcation
 
-Stats of 21 games:
-  Wins:
-      1    1    4.8%    4.8%
-      2    7   33.3%   38.1%
-      3   11   52.4%   90.5%
-      4    2    9.5%  100.0%
-      5    0    0.0%  100.0%
-      6    0    0.0%  100.0%
-      7    0    0.0%  100.0%
-      8    0    0.0%  100.0%
-      9    0    0.0%  100.0%
-     10    0    0.0%  100.0%
+Distribution of tries required to win:
+  Tries   Wins  % of games     Cum. %
+      1      1        4.8%       4.8%
+      2      7       33.3%      38.1%
+      3     11       52.4%      90.5%
+      4      2        9.5%     100.0%
+      5      0        0.0%     100.0%
+      6      0        0.0%     100.0%
+    --- would lose below this line ---
+      7      0        0.0%     100.0%
+      8      0        0.0%     100.0%
+      9      0        0.0%     100.0%
+     10      0        0.0%     100.0%
 
 Total time: 12.345 seconds (parallelism: 6).

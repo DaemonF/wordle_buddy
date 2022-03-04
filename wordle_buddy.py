@@ -45,20 +45,24 @@ def inds(score):
   return i
 
 
-def fmt_real(stat):
+def fmt_perc(value):
+  return f"{value:.1%}"
+
+
+def fmt_stat_real(stat):
   return f"{stat: >5.3f}"
 
 
-def fmt_perc(stat):
+def fmt_stat_perc(stat):
   return f"{stat: >5.1%}"
 
 
-def fmt_stats(items, fmt_item=fmt_perc):
-  return ", ".join(fmt_item(i) for i in items)
+def fmt_stats(items, fmt_item=fmt_stat_perc, sep=", "):
+  return sep.join(fmt_item(i) for i in items)
 
 
-def fmt_blocks(items, fmt_item=fmt_perc):
-  return f"[ {' ][ '.join(fmt_item(i) for i in items)} ]"
+def fmt_stats_block(items, fmt_item=fmt_stat_perc):
+  return f"[ {fmt_stats(items, fmt_item, sep=' ][ ')} ]"
 
 
 class FakeMultiprocessing:
@@ -252,7 +256,7 @@ class Guess:
 
   def __str__(self):
     stats = ", ".join(
-      f"{strategy.value}: {fmt_real(grade)}"
+      f"{strategy.value}: {fmt_stat_real(grade)}"
       for strategy, grade in (
         (strategy, self.wordlist.grade(self.word, strategy))
         for strategy in Strategy
@@ -538,15 +542,14 @@ def show_stats_interactive(game, wordlist, strategy):
       elif strategy in (Strategy.FREQ, Strategy.CLUES):
         stats = wordlist.stats[entry]
         print(
-          f"  Appears anywhere in word: "
-          f"{fmt_perc(sum(stats.green_chance))}\n"
-          f"\n"
-          f"  Positional chance of green:\n"
-          f"    {fmt_blocks(stats.green_chance)}\n"
-          f"  Positional chance of yellow:\n"
-          f"    {fmt_blocks(stats.yellow_chance)}\n"
-          f"  Positional chance of gray:\n"
-          f"    {fmt_blocks(stats.gray_chance)}\n"
+          f"  Chance of appearing in the answer:\n"
+          f"    {fmt_perc(sum(stats.green_chance))}\n"
+          f"  Positional chance of being green:\n"
+          f"    {fmt_stats_block(stats.green_chance)}\n"
+          f"  Positional chance of being yellow:\n"
+          f"    {fmt_stats_block(stats.yellow_chance)}\n"
+          f"  Chance of being gray:\n"
+          f"    {fmt_perc(stats.gray_chance[0])}\n"
           f"\n"
           f"  Distribution of count per word it appears in:\n"
           f"    {fmt_stats(stats.dupe_chance)}"
@@ -644,7 +647,13 @@ def regression_test_case(wordlist, strategy, answer):
       wordlist.game, wordlist, strategy, answer, quiet=True
     )
   except Exception:
-    return answer
+    print(
+      f"Crash:\n"
+      f"  game: {wordlist.game}\n"
+      f"  strategy: {strategy}\n"
+      f"  answer: {answer}"
+    )
+    raise
 
 
 def regression_test(
@@ -660,7 +669,6 @@ def regression_test(
 
   games = len(answerlist)
   wins = [0] * 10
-  crashes = []
 
   start = perf_counter()
   func = PoolFunc(regression_test_case).partial(
@@ -672,35 +680,28 @@ def regression_test(
   ) as pool:
     results = pool.imap_unordered(func, answerlist)
     for result in tqdm(results, total=games):
-      if isinstance(result, str):
-        crashes.append(results)
-      else:
-        wins[len(result.tries) - 1] += 1
+      wins[len(result.tries) - 1] += 1
   elapsed = perf_counter() - start
   if game is Game.HERMETIC:
     elapsed = 12.345
 
+  sampling_desc = f"1/{sampling} of "
   print(
-    f"Regression test\n"
-    f"  List: {len(wordlist)} words\n"
-    f"  Games: {games} games of {game.display_name}"
-    f"{'' if sampling == 1 else f' (sampling: 1/{sampling})'}\n"
-    f"  Strategy: {strategy.value}\n"
+    f"Test details:\n"
+    f"  Games:     playing {games} games of {game.display_name}\n"
+    f"  Sampling:  playing {'' if sampling == 1 else sampling_desc}all possible games\n"
+    f"  Guesslist: starting with {len(wordlist)} potential words\n"
+    f"  Strategy:  guessing based on {strategy.description}\n"
     f"\n"
-    f"Stats of {games} games:"
+    f"Distribution of tries required to win:\n"
+    f"  Tries   Wins  % of games     Cum. %"
   )
-  if crashes:
-    print(
-      f"  Crashes: {len(crashes)} {len(crashes) / games:.2%}"
-    )
-    for crash in crashes:
-      print(f"    {crash}")
-  print(f"  Wins:")
   for index, count in enumerate(wins):
-    perc = lambda n, d: f"{n/d:.1%}"
+    if index == game.max_tries:
+      print("    --- would lose below this line ---")
     print(
-      f"    {index+1:>3} {count:>4} {perc(count, games):>7} "
-      f"{perc(sum(wins[:index+1]), games):>7}"
+      f"  {index+1:>5} {count:>6} {fmt_perc(count / games):>11} "
+      f"{fmt_perc(sum(wins[:index+1]) / games):>10}"
     )
   print(
     f"\n"

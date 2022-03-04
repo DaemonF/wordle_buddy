@@ -1,21 +1,23 @@
 Building scoring table...
 Built scoring table in 0.012 seconds.
-Regression test
-  List: 92 words
-  Games: 92 games of Lewdle
-  Strategy: bifur
+Test details:
+  Games:     playing 92 games of Lewdle
+  Sampling:  playing all possible games
+  Guesslist: starting with 92 potential words
+  Strategy:  guessing based on maximum wordlist bifurcation
 
-Stats of 92 games:
-  Wins:
-      1    1    1.1%    1.1%
-      2   32   34.8%   35.9%
-      3   57   62.0%   97.8%
-      4    2    2.2%  100.0%
-      5    0    0.0%  100.0%
-      6    0    0.0%  100.0%
-      7    0    0.0%  100.0%
-      8    0    0.0%  100.0%
-      9    0    0.0%  100.0%
-     10    0    0.0%  100.0%
+Distribution of tries required to win:
+  Tries   Wins  % of games     Cum. %
+      1      1        1.1%       1.1%
+      2     32       34.8%      35.9%
+      3     57       62.0%      97.8%
+      4      2        2.2%     100.0%
+      5      0        0.0%     100.0%
+      6      0        0.0%     100.0%
+    --- would lose below this line ---
+      7      0        0.0%     100.0%
+      8      0        0.0%     100.0%
+      9      0        0.0%     100.0%
+     10      0        0.0%     100.0%
 
-Total time: 0.045 seconds (parallelism: 6).
+Total time: 0.039 seconds (parallelism: 6).

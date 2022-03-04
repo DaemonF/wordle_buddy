@@ -8,14 +8,14 @@ By potential clue value:
   baron (freq: 0.420, clues: 0.206, bifur: 3.727)
 
 Enter a letter or word: t
-  Appears anywhere in word:  9.8%
-
-  Positional chance of green:
+  Chance of appearing in the answer:
+    9.8%
+  Positional chance of being green:
     [  4.9% ][  0.0% ][  2.4% ][  0.0% ][  2.4% ]
-  Positional chance of yellow:
+  Positional chance of being yellow:
     [  4.9% ][  9.8% ][  7.3% ][  9.8% ][  7.3% ]
-  Positional chance of gray:
-    [ 90.2% ][ 90.2% ][ 90.2% ][ 90.2% ][ 90.2% ]
+  Chance of being gray:
+    90.2%
 
   Distribution of count per word it appears in:
     100.0%,  0.0%,  0.0%,  0.0%,  0.0%

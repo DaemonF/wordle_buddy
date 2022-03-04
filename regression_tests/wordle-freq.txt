@@ -1,19 +1,21 @@
-Regression test
-  List: 2315 words
-  Games: 2315 games of Wordle
-  Strategy: freq
+Test details:
+  Games:     playing 2315 games of Wordle
+  Sampling:  playing all possible games
+  Guesslist: starting with 2315 potential words
+  Strategy:  guessing based on positional letter frequency
 
-Stats of 2315 games:
-  Wins:
-      1    1    0.0%    0.0%
-      2  146    6.3%    6.3%
-      3  906   39.1%   45.5%
-      4  974   42.1%   87.6%
-      5  230    9.9%   97.5%
-      6   44    1.9%   99.4%
-      7   12    0.5%   99.9%
-      8    2    0.1%  100.0%
-      9    0    0.0%  100.0%
-     10    0    0.0%  100.0%
+Distribution of tries required to win:
+  Tries   Wins  % of games     Cum. %
+      1      1        0.0%       0.0%
+      2    146        6.3%       6.3%
+      3    906       39.1%      45.5%
+      4    974       42.1%      87.6%
+      5    230        9.9%      97.5%
+      6     44        1.9%      99.4%
+    --- would lose below this line ---
+      7     12        0.5%      99.9%
+      8      2        0.1%     100.0%
+      9      0        0.0%     100.0%
+     10      0        0.0%     100.0%
 
-Total time: 5.911 seconds (parallelism: 6).
+Total time: 6.108 seconds (parallelism: 6).
