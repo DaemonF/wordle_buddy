@@ -1,7 +1,7 @@
 #!/usr/bin/env fish
 
 set games lewdle wordle_hard wordle
-set strategies freq clues bifur
+set strategies freq clues div
 
 set dir regression_tests
 for game in $games
@@ -12,6 +12,7 @@ for game in $games
       --cython \
       --game=$game \
       --strategy=$strat \
-      > $dir/$game-$strat.txt
+      > $path.tmp \
+      && mv $path.tmp $path
   end
 end

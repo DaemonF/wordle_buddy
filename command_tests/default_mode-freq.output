@@ -1,11 +1,11 @@
 Showing wordlist and starting-word stats...
 
 By positional letter frequency:
-  salon (freq: 0.439, clues: 0.208, bifur: 4.100)
-  mason (freq: 0.420, clues: 0.211, bifur: 5.125)
-  baron (freq: 0.420, clues: 0.206, bifur: 3.727)
-  talon (freq: 0.420, clues: 0.187, bifur: 4.100)
-  melon (freq: 0.415, clues: 0.188, bifur: 2.733)
+  salon (freq: 0.439, clues: 0.208, div: 4.100)
+  mason (freq: 0.420, clues: 0.211, div: 5.125)
+  baron (freq: 0.420, clues: 0.206, div: 3.727)
+  talon (freq: 0.420, clues: 0.187, div: 4.100)
+  melon (freq: 0.415, clues: 0.188, div: 2.733)
 
 Enter a letter or word: t
   Chance of appearing in the answer:
@@ -21,7 +21,7 @@ Enter a letter or word: t
     100.0%,  0.0%,  0.0%,  0.0%,  0.0%
 
 Enter a letter or word: robot
-  robot (freq: 0.063, clues: 0.103, bifur: 2.103)
+  robot (freq: 0.063, clues: 0.103, div: 2.103)
   Note: Not in wordlist.
 
 Enter a letter or word: 

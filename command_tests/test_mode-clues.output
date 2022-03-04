@@ -2,7 +2,7 @@ Test details:
   Games:     playing 21 games of Hermetic testing
   Sampling:  playing 1/2 of all possible games
   Guesslist: starting with 41 potential words
-  Strategy:  guessing based on potential clue value
+  Strategy:  guessing based on value of likely clues
 
 Distribution of tries required to win:
   Tries   Wins  % of games     Cum. %

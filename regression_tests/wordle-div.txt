@@ -1,10 +1,10 @@
 Building scoring table...
-Built scoring table in 1.119 seconds.
+Built scoring table in 1.105 seconds.
 Test details:
   Games:     playing 2315 games of Wordle
   Sampling:  playing all possible games
   Guesslist: starting with 2315 potential words
-  Strategy:  guessing based on maximum wordlist bifurcation
+  Strategy:  guessing based on max division of the wordlist
 
 Distribution of tries required to win:
   Tries   Wins  % of games     Cum. %
@@ -20,4 +20,4 @@ Distribution of tries required to win:
       9      0        0.0%     100.0%
      10      0        0.0%     100.0%
 
-Total time: 135.490 seconds (parallelism: 6).
+Total time: 136.451 seconds (parallelism: 6).

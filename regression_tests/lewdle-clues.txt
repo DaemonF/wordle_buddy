@@ -2,7 +2,7 @@ Test details:
   Games:     playing 92 games of Lewdle
   Sampling:  playing all possible games
   Guesslist: starting with 92 potential words
-  Strategy:  guessing based on potential clue value
+  Strategy:  guessing based on value of likely clues
 
 Distribution of tries required to win:
   Tries   Wins  % of games     Cum. %
@@ -18,4 +18,4 @@ Distribution of tries required to win:
       9      0        0.0%     100.0%
      10      0        0.0%     100.0%
 
-Total time: 0.029 seconds (parallelism: 6).
+Total time: 0.031 seconds (parallelism: 6).

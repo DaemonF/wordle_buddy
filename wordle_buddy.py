@@ -215,8 +215,8 @@ class Strategy(PropEnum):
   """The strategy to use when playing a game."""
 
   FREQ = ("freq", "positional letter frequency")
-  CLUES = ("clues", "potential clue value")
-  BIFUR = ("bifur", "maximum wordlist bifurcation")
+  CLUES = ("clues", "value of likely clues")
+  DIV = ("div", "max division of the wordlist")
 
   def __init__(self, _, description):
     self.description = description
@@ -293,7 +293,7 @@ class WordList(OrderedSet):
 
     if strategy in (Strategy.FREQ, Strategy.CLUES):
       self.build_stats()
-    elif strategy is Strategy.BIFUR and not scoring_table:
+    elif strategy is Strategy.DIV and not scoring_table:
       self.build_scoring_table()
 
   def __getstate__(self):
@@ -431,15 +431,15 @@ class WordList(OrderedSet):
 
   def grade(self, word, strategy: Strategy):
     if strategy is Strategy.FREQ:
-      return self._grade_by_frequency(word)
+      return self._grade_by_freq(word)
     elif strategy is Strategy.CLUES:
-      return self._grade_by_potential_clues(word)
-    elif strategy is Strategy.BIFUR:
-      return self._grade_by_bifurcation(word)
+      return self._grade_by_clues(word)
+    elif strategy is Strategy.DIV:
+      return self._grade_by_div(word)
     else:
       assert False
 
-  def _grade_by_frequency(self, word):
+  def _grade_by_freq(self, word):
     """Grades a guess base on positional letter frequency in
     the wordlist."""
     if not self.stats:
@@ -457,7 +457,7 @@ class WordList(OrderedSet):
       grade -= 0.01
     return grade
 
-  def _grade_by_potential_clues(self, word):
+  def _grade_by_clues(self, word):
     """Grades a guess by how many potential clues it could give
     based on the wordlist."""
     if not self.stats:
@@ -493,9 +493,9 @@ class WordList(OrderedSet):
       grade -= 0.01
     return grade
 
-  def _grade_by_bifurcation(self, word):
-    """Grades a guess based on how closely it would split the
-    wordlist in equal halves."""
+  def _grade_by_div(self, word):
+    """Grades a guess based on how well it divides the wordlist
+    into smaller parts."""
     buckets = [0] * (3 ** self.game.word_length)
     if self.scoring_table and word in self.scoring_table:
       scores = self.scoring_table[word]
@@ -554,8 +554,8 @@ def show_stats_interactive(game, wordlist, strategy):
           f"  Distribution of count per word it appears in:\n"
           f"    {fmt_stats(stats.dupe_chance)}"
         )
-      elif strategy is Strategy.BIFUR:
-        print("\n  Strategy.BIFUR doesn't support letter stats.")
+      elif strategy is Strategy.DIV:
+        print(f"\n  {strategy} doesn't support letter stats.")
       else:
         assert False
     elif len(entry) == game.word_length:
@@ -758,9 +758,7 @@ def run_wordle_buddy(
 def main():
   parser = ArgumentParser()
   parser.add_argument("--game", default="jaydle", type=Game)
-  parser.add_argument(
-    "--strategy", default="bifur", type=Strategy
-  )
+  parser.add_argument("--strategy", default="div", type=Strategy)
   parser.add_argument("--dict_file", default=None)
   parser.add_argument("--profile", action=BooleanOptionalAction)
   parser.add_argument("--cython", action=BooleanOptionalAction)

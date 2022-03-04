@@ -18,4 +18,4 @@ Distribution of tries required to win:
       9      0        0.0%     100.0%
      10      0        0.0%     100.0%
 
-Total time: 6.108 seconds (parallelism: 6).
+Total time: 6.099 seconds (parallelism: 6).

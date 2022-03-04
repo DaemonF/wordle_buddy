@@ -1,0 +1,20 @@
+Building scoring table...
+Built scoring table in 1.234 seconds.
+Showing wordlist and starting-word stats...
+
+By max division of the wordlist:
+  arson (freq: 0.000, clues: 0.000, div: 5.125)
+  mason (freq: 0.000, clues: 0.000, div: 5.125)
+  canon (freq: 0.000, clues: 0.000, div: 4.556)
+  canoe (freq: 0.000, clues: 0.000, div: 4.100)
+  salon (freq: 0.000, clues: 0.000, div: 4.100)
+
+Enter a letter or word: t
+
+  Strategy.DIV doesn't support letter stats.
+
+Enter a letter or word: robot
+  robot (freq: 0.000, clues: 0.000, div: 2.103)
+  Note: Not in wordlist.
+
+Enter a letter or word: 
