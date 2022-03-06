@@ -31,9 +31,7 @@ score_emoji = ("\U0001F7E9", "\U0001F7E8", "\U00002B1B")
 
 
 # Letters from 'a' to 'z', for convenience.
-letters = tuple(
-  chr(ordinal) for ordinal in range(ord("a"), ord("z") + 1)
-)
+letters = "abcdefghijklmnopqrstuvwxyz"
 
 
 def inds(score):
@@ -65,12 +63,13 @@ class FakeMultiprocessing:
     initializer()
     yield self
 
-  def imap_unordered(self, func, it, chunksize=None):
+  @staticmethod
+  def imap_unordered(func, it, **_):
     return (func(i) for i in it)
 
 
 class PoolFunc:
-  def __init__(self, func, *args):
+  def __init__(self, func):
     self.func = pickle.dumps(func)
     self.args = ()
     self.set_up = False
@@ -97,7 +96,7 @@ class PropEnum(Enum):
   """Enum that allows properties that don't affect the enum
   identity."""
 
-  def __new__(cls, *args, **kwds):
+  def __new__(cls, *args):
     obj = object.__new__(cls)
     obj._value_ = args[0]
     return obj
@@ -175,7 +174,7 @@ class Game(PropEnum):
 
   def __init__(
     self,
-    name,
+    _,
     display_name,
     default_dict_file,
     word_length,
@@ -211,7 +210,7 @@ class Strategy(PropEnum):
   CLUES = ("clues", "potential clue value")
   BIFUR = ("bifur", "maximum wordlist bifurcation")
 
-  def __init__(self, name, description):
+  def __init__(self, _, description):
     self.description = description
 
 
@@ -313,7 +312,7 @@ class WordList(OrderedSet):
   def sublist(self, guess, score):
     """Returns a new WordList by removing all incompatible words
     from this wordlist."""
-    f = lambda word: True
+    f = lambda _: True
     for i, (g, s) in enumerate(zip(guess, score)):
       if s == GRAY:
         count = sum(
@@ -389,7 +388,7 @@ class WordList(OrderedSet):
 
     # Normalize
     total_words = len(self)
-    for letter, stats in self.stats.items():
+    for stats in self.stats.values():
       total_count = sum(stats.dupe_chance) or 1
       for index in range(self.game.word_length):
         stats.green_chance[index] /= total_words
@@ -495,7 +494,6 @@ class WordList(OrderedSet):
       for answer in self:
         buckets[scores[answer]] += 1
     else:
-      guess = Guess(word, self)
       for answer in self:
         buckets[inds(self._compute_score(word, answer))] += 1
     biggest_bucket = max(buckets)
@@ -505,7 +503,8 @@ class WordList(OrderedSet):
       biggest_bucket += 0.5
     return len(self) / biggest_bucket
 
-  def _dupe_modifier(self, prefix, letter, stats):
+  @staticmethod
+  def _dupe_modifier(prefix, letter, stats):
     """If the Guess contains duplicate letters, discount later
     occurrences based on the dupe chance."""
     if letter not in prefix:
@@ -608,7 +607,7 @@ def play_game(
 
 
 def play_game_interactive(game, wordlist, strategy):
-  def scoring_func(guess):
+  def scoring_func(_):
     while True:
       entry = input("What was the score? ")
       if not sys.stdin.isatty():
@@ -640,7 +639,7 @@ def regression_test_case(wordlist, strategy, answer):
     return play_game_with_answer(
       wordlist.game, wordlist, strategy, answer, quiet=True
     )
-  except Exception as e:
+  except Exception:
     return answer
 
 
@@ -715,8 +714,9 @@ def run_wordle_buddy(
   mode,
   sampling,
   answer_file,
-  **kwargs,
+  **_,
 ):
+  wordlist = None
   with open(dict_file or game.default_dict_file, "r") as f:
     wordlist = WordList(
       (
@@ -784,6 +784,11 @@ def main():
       "nonecheck": False,
       "profile": bool(args.profile),
       "infer_types": True,
+      # "warn.undeclared": True,
+      "warn.maybe_uninitialized": True,
+      # "warn.unused": True,
+      "warn.unused_arg": True,
+      "warn.unused_result": True,
     }
     directives = ",".join(
       f"{name}={val}" for name, val in directives.items()
@@ -801,6 +806,7 @@ def main():
     # to avoid duplicate definition issues, such as with enums.
     return main()
 
+  prof = None
   with ExitStack() as stack:
     if args.profile:
       global multiprocessing
@@ -808,20 +814,20 @@ def main():
       timer = perf_counter_ns
       if args.game is Game.HERMETIC:
         timer = lambda: 0
-      pr = stack.enter_context(
+      prof = stack.enter_context(
         profile.Profile(timer=timer, timeunit=1e-9)
       )
 
     run_wordle_buddy(**vars(args))
 
-  if args.profile:
+  if prof:
     if args.game is Game.HERMETIC:
       print(
         "\tCollected profile successfully. Supressing "
         "non-hermetic output."
       )
     else:
-      Stats(pr).sort_stats(SortKey.TIME).print_stats()
+      Stats(prof).sort_stats(SortKey.TIME).print_stats()
 
 
 if __name__ == "__main__":
