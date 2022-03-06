@@ -789,7 +789,7 @@ def main():
       "infer_types": True,
       # "warn.undeclared": True,
       "warn.maybe_uninitialized": True,
-      # "warn.unused": True,
+      "warn.unused": True,
       "warn.unused_arg": True,
       "warn.unused_result": True,
     }
@@ -806,16 +806,36 @@ def main():
       bufsize=1,
       text=True,
     ) as p:
+
+      def build_ignored_warnings_re():
+        paths = (r"/usr/lib/",)
+        paths = r"|".join(re.escape(path) for path in paths)
+
+        messages = (r"Unused entry 'genexpr'",)
+        messages = r"|".join(
+          re.escape(path) for path in messages
+        )
+
+        return re.compile(
+          fr"warning:("
+          fr" ({paths})|"
+          fr" [^:]+:[0-9]+:[0-9]+: ({messages})"
+          fr")"
+        )
+
       compiling_re = re.compile(r"Compiling ")
       build_ext_re = re.compile(r"running build_ext")
       gcc_re = re.compile(r"(gcc|g\+\+)")
       warning_re = re.compile(r"warning: ")
+      ignored_warnings_re = build_ignored_warnings_re()
 
       msg = lambda *args: print(*args, file=sys.stderr)
       recompiling = False
       for line in p.stdout:
         line = line.rstrip()
-        if build_ext_re.match(line):
+        if build_ext_re.match(line) or ignored_warnings_re.match(
+          line
+        ):
           continue
         elif (
           compiling_re.match(line)
