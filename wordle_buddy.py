@@ -778,7 +778,7 @@ def main():
   args = parser.parse_args()
   if not c.compiled and args.cython:
     subprocess.run(
-      ["cythonize", "-i", "-a", "wordle_buddy.py"],
+      ["cythonize", "-b", "-a", "wordle_buddy.py"],
       stdout=sys.stderr,
       check=True,
     )

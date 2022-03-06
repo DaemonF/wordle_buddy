@@ -3,3 +3,4 @@ syntax: glob
 *.cpp
 *.html
 *.so
+build/
