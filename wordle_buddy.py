@@ -777,10 +777,23 @@ def main():
 
   args = parser.parse_args()
   if not c.compiled and args.cython:
+    directives = {
+      "boundscheck": False,
+      "wraparound": False,
+      "initializedcheck": False,
+      "nonecheck": False,
+      "profile": bool(args.profile),
+      "infer_types": True,
+    }
+    directives = ",".join(
+      f"{name}={val}" for name, val in directives.items()
+    )
+
+    bin = "/usr/bin/cythonize"
+    flags = ("--build", "--annotate", "-X", directives)
+    sources = ("wordle_buddy.py",)
     subprocess.run(
-      ["cythonize", "-b", "-a", "wordle_buddy.py"],
-      stdout=sys.stderr,
-      check=True,
+      [bin, *flags, *sources], stdout=sys.stderr, check=True
     )
     from wordle_buddy import main
 
