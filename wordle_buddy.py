@@ -7,7 +7,6 @@ import cython as c
 import multiprocessing
 import pickle
 import os
-import subprocess
 import sys
 
 from argparse import ArgumentParser, BooleanOptionalAction
@@ -19,6 +18,11 @@ from pstats import Stats, SortKey
 from time import perf_counter, perf_counter_ns
 from tqdm import tqdm
 
+if not c.compiled:
+  import re
+  import subprocess
+
+  from colorama import Fore, Style
 
 # Constants for the possible scores.
 GREEN = 0
@@ -794,12 +798,49 @@ def main():
       f"{name}={val}" for name, val in directives.items()
     )
 
-    bin = "/usr/bin/cythonize"
     flags = ("--build", "--annotate", "-X", directives)
     sources = ("wordle_buddy.py",)
-    subprocess.run(
-      [bin, *flags, *sources], stdout=sys.stderr, check=True
-    )
+    with subprocess.Popen(
+      ["/usr/bin/cythonize", *flags, *sources],
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      bufsize=1,
+      text=True,
+    ) as p:
+      compiling_re = re.compile(r"Compiling ")
+      build_ext_re = re.compile(r"running build_ext")
+      gcc_re = re.compile(r"(gcc|g\+\+)")
+      warning_re = re.compile(r"warning: ")
+
+      msg = lambda *args: print(*args, file=sys.stderr)
+      recompiling = False
+      for line in p.stdout:
+        line = line.rstrip()
+        if build_ext_re.match(line):
+          continue
+        elif (
+          compiling_re.match(line)
+          or gcc_re.match(line)
+          or (not recompiling and warning_re.match(line))
+        ):
+          msg()
+          recompiling = True
+
+        if warning_re.match(line):
+          line = (
+            f"{Fore.YELLOW}WARNING:{Style.RESET_ALL}"
+            f" {warning_re.sub('', line)}"
+          )
+        msg(line)
+      error = p.wait()
+      if error:
+        msg(
+          "{Fore.RED}ERROR:{Style.RESET_ALL}"
+          " Compilation failed. Exiting."
+        )
+        sys.exit(error)
+      if recompiling:
+        msg("\nDone. Running program...\n")
     from wordle_buddy import main
 
     # It is critical to reparse args within the compiled version
