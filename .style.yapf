@@ -1,0 +1,11 @@
+[style]
+based_on_style = pep8
+
+column_limit = 65
+indent_width = 2
+continuation_indent_width = 2
+
+split_before_first_argument = true
+split_before_arithmetic_operator = true
+split_before_expression_after_opening_paren = true
+split_complex_comprehension = true

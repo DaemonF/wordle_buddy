@@ -33,7 +33,6 @@ GRAY = 2
 score_chars = ("!", "?", "x")
 score_emoji = ("\U0001F7E9", "\U0001F7E8", "\U00002B1B")
 
-
 # Letters from 'a' to 'z', for convenience.
 letters = "abcdefghijklmnopqrstuvwxyz"
 
@@ -66,6 +65,7 @@ def fmt_stats_block(items, fmt_item=fmt_stat_perc):
 
 
 class FakeMultiprocessing:
+
   @contextmanager
   def Pool(self, initializer=None):
     initializer()
@@ -77,6 +77,7 @@ class FakeMultiprocessing:
 
 
 class PoolFunc:
+
   def __init__(self, func):
     self.func = pickle.dumps(func)
     self.args = ()
@@ -207,8 +208,7 @@ class Game(PropEnum):
       f"{self.display_name} {game_id} {len(result.tries)}"
       f"/{self.max_tries}{self.mode_symbol}\n\n"
       f"{result}\n\n"
-      f"(Bot play{self.mode_desc})\n"
-    )
+      f"(Bot play{self.mode_desc})\n")
 
 
 class Strategy(PropEnum):
@@ -230,8 +230,7 @@ class Result:
 
   def __str__(self):
     return "\n".join(
-      score.fmt_emoji_and_stats() for score in self.tries
-    )
+      score.fmt_emoji_and_stats() for score in self.tries)
 
 
 class Score:
@@ -250,6 +249,7 @@ class Score:
 
 
 class Guess:
+
   def __init__(self, word, wordlist):
     self.word = word
     self.wordlist = wordlist
@@ -259,13 +259,12 @@ class Guess:
       f"{strategy.value}: {fmt_stat_real(grade)}"
       for strategy, grade in (
         (strategy, self.wordlist.grade(self.word, strategy))
-        for strategy in Strategy
-      )
-    )
+        for strategy in Strategy))
     return f"{self.word} ({stats})"
 
 
 class LetterStats:
+
   def __init__(self, game):
     self.green_chance = [0] * game.word_length
     self.yellow_chance = [0] * game.word_length
@@ -280,9 +279,9 @@ class LetterStats:
 
 
 class WordList(OrderedSet):
+
   def __init__(
-    self, wordlist, game, strategy, scoring_table=None
-  ):
+      self, wordlist, game, strategy, scoring_table=None):
     super(WordList, self).__init__(wordlist)
     self.game = game
     self.strategy = strategy
@@ -324,26 +323,19 @@ class WordList(OrderedSet):
     for i, (g, s) in enumerate(zip(guess, score)):
       if s == GRAY:
         count = sum(
-          1
-          for g2, s2 in zip(guess, score)
-          if g2 == g and s2 != GRAY
-        )
+          1 for g2, s2 in zip(guess, score)
+          if g2 == g and s2 != GRAY)
         f = lambda word, i=i, g=g, c=count, f=f: (
-          word[i] != g and f(word) and word.count(g) <= c
-        )
+          word[i] != g and f(word) and word.count(g) <= c)
       elif s == YELLOW:
         count = sum(
-          1
-          for g2, s2 in zip(guess, score)
-          if g2 == g and s2 != GRAY
-        )
+          1 for g2, s2 in zip(guess, score)
+          if g2 == g and s2 != GRAY)
         f = lambda word, i=i, g=g, c=count, f=f: (
-          word[i] != g and f(word) and word.count(g) >= c
-        )
+          word[i] != g and f(word) and word.count(g) >= c)
       elif s == GREEN:
         f = lambda word, i=i, g=g, f=f: (
-          word[i] == g and f(word)
-        )
+          word[i] == g and f(word))
       else:
         assert False
 
@@ -375,7 +367,8 @@ class WordList(OrderedSet):
 
   def build_stats(self):
     self.stats = {
-      letter: LetterStats(self.game) for letter in letters
+      letter: LetterStats(self.game)
+      for letter in letters
     }
     for word in self:
       # Track how a given guess would score for this answer.
@@ -390,9 +383,8 @@ class WordList(OrderedSet):
             stats.gray_chance[index] += 1
       # Track how often letters appear within a word.
       for letter in set(word):
-        self.stats[letter].dupe_chance[
-          word.count(letter) - 1
-        ] += 1
+        self.stats[letter].dupe_chance[word.count(letter)
+                                       - 1] += 1
 
     # Normalize
     total_words = len(self)
@@ -422,7 +414,8 @@ class WordList(OrderedSet):
     with multiprocessing.Pool(initializer=func.setup) as pool:
       parts = pool.imap_unordered(func, self, chunksize=20)
       self.scoring_table = {
-        word: scores for word, scores in parts
+        word: scores
+        for word, scores in parts
       }
     elapsed = perf_counter() - start
     if self.game is Game.HERMETIC:
@@ -448,9 +441,8 @@ class WordList(OrderedSet):
     for index, letter in enumerate(word):
       stats = self.stats[letter]
       grade += (
-        stats.green_chance[index]
-        * self._dupe_modifier(word[:index], letter, stats)
-      ) / self.game.word_length
+        stats.green_chance[index] * self._dupe_modifier(
+          word[:index], letter, stats)) / self.game.word_length
 
     # Make words outside the wordlist slightly less attractive.
     if not (self.game.hard_mode or word in self):
@@ -472,8 +464,7 @@ class WordList(OrderedSet):
       # In Wordle, duplicate letters only count as yellow if the
       # answer has the same or more duplicates. Model that.
       yellows = stats.yellow_chance[index] * self._dupe_modifier(
-        prefix, letter, stats
-      )
+        prefix, letter, stats)
       # Only the first gray for a given letter matters.
       grays = 0 if letter in prefix else stats.gray_chance[index]
 
@@ -483,10 +474,8 @@ class WordList(OrderedSet):
       gray_weight = 0.5 - abs(0.5 - grays)
 
       grade += (
-        greens * green_weight
-        + yellows * yellow_weight
-        + grays * gray_weight
-      ) / self.game.word_length
+        greens * green_weight + yellows * yellow_weight
+        + grays * gray_weight) / self.game.word_length
 
     # Make words outside the wordlist slightly less attractive.
     if not (self.game.hard_mode or word in self):
@@ -496,7 +485,7 @@ class WordList(OrderedSet):
   def _grade_by_div(self, word):
     """Grades a guess based on how well it divides the wordlist
     into smaller parts."""
-    buckets = [0] * (3 ** self.game.word_length)
+    buckets = [0] * (3**self.game.word_length)
     if self.scoring_table and word in self.scoring_table:
       scores = self.scoring_table[word]
       for answer in self:
@@ -517,15 +506,15 @@ class WordList(OrderedSet):
     occurrences based on the dupe chance."""
     if letter not in prefix:
       return 1
-    return sum(stats.dupe_chance[prefix.count(letter) :])
+    return sum(stats.dupe_chance[prefix.count(letter):])
 
 
 def show_stats_interactive(game, wordlist, strategy):
   print(f"By {strategy.description}:")
   for guess in sorted(
-    wordlist,
-    key=lambda word: wordlist.grade(word, strategy),
-    reverse=True,
+      wordlist,
+      key=lambda word: wordlist.grade(word, strategy),
+      reverse=True,
   )[:5]:
     print(f"  {Guess(guess, wordlist)}")
   print()
@@ -552,8 +541,7 @@ def show_stats_interactive(game, wordlist, strategy):
           f"    {fmt_perc(stats.gray_chance[0])}\n"
           f"\n"
           f"  Distribution of count per word it appears in:\n"
-          f"    {fmt_stats(stats.dupe_chance)}"
-        )
+          f"    {fmt_stats(stats.dupe_chance)}")
       elif strategy is Strategy.DIV:
         print(f"\n  {strategy} doesn't support letter stats.")
       else:
@@ -565,8 +553,7 @@ def show_stats_interactive(game, wordlist, strategy):
     else:
       print(
         f"ERROR: Invalid length. Must be 1 or "
-        f"{game.word_length} characters."
-      )
+        f"{game.word_length} characters.")
     print()
 
 
@@ -614,6 +601,7 @@ def play_game(
 
 
 def play_game_interactive(game, wordlist, strategy):
+
   def scoring_func(_):
     while True:
       entry = input("What was the score? ")
@@ -626,8 +614,7 @@ def play_game_interactive(game, wordlist, strategy):
 
 
 def play_game_with_answer(
-  game, wordlist, strategy, answer, quiet=False
-):
+    game, wordlist, strategy, answer, quiet=False):
   assert answer in wordlist
 
   def scoring_func(guess):
@@ -637,33 +624,28 @@ def play_game_with_answer(
     return score
 
   return play_game(
-    game, wordlist, strategy, scoring_func, quiet=quiet
-  )
+    game, wordlist, strategy, scoring_func, quiet=quiet)
 
 
 def regression_test_case(wordlist, strategy, answer):
   try:
     return play_game_with_answer(
-      wordlist.game, wordlist, strategy, answer, quiet=True
-    )
+      wordlist.game, wordlist, strategy, answer, quiet=True)
   except Exception:
     print(
       f"Crash:\n"
       f"  game: {wordlist.game}\n"
       f"  strategy: {strategy}\n"
-      f"  answer: {answer}"
-    )
+      f"  answer: {answer}")
     raise
 
 
 def regression_test(
-  game, wordlist, strategy, sampling, answerlist
-):
+    game, wordlist, strategy, sampling, answerlist):
   answerlist = answerlist or wordlist
   if sampling != 1:
     answerlist = [
-      answer
-      for index, answer in enumerate(answerlist)
+      answer for index, answer in enumerate(answerlist)
       if index % sampling == 0
     ]
 
@@ -672,12 +654,10 @@ def regression_test(
 
   start = perf_counter()
   func = PoolFunc(regression_test_case).partial(
-    wordlist, strategy
-  )
+    wordlist, strategy)
   parallelism = os.cpu_count()
-  with multiprocessing.Pool(
-    parallelism, initializer=func.setup
-  ) as pool:
+  with multiprocessing.Pool(parallelism,
+                            initializer=func.setup) as pool:
     results = pool.imap_unordered(func, answerlist)
     for result in tqdm(results, total=games):
       wins[len(result.tries) - 1] += 1
@@ -694,20 +674,17 @@ def regression_test(
     f"  Strategy:  guessing based on {strategy.description}\n"
     f"\n"
     f"Distribution of tries required to win:\n"
-    f"  Tries   Wins  % of games     Cum. %"
-  )
+    f"  Tries   Wins  % of games     Cum. %")
   for index, count in enumerate(wins):
     if index == game.max_tries:
       print("    --- would lose below this line ---")
     print(
       f"  {index+1:>5} {count:>6} {fmt_perc(count / games):>11} "
-      f"{fmt_perc(sum(wins[:index+1]) / games):>10}"
-    )
+      f"{fmt_perc(sum(wins[:index+1]) / games):>10}")
   print(
     f"\n"
     f"Total time: {elapsed:.3f} seconds "
-    f"(parallelism: {parallelism})."
-  )
+    f"(parallelism: {parallelism}).")
 
 
 def run_wordle_buddy(
@@ -727,8 +704,7 @@ def run_wordle_buddy(
       (
         entry
         for entry in (line.strip() for line in f.readlines())
-        if len(entry) == game.word_length
-      ),
+        if len(entry) == game.word_length),
       game,
       strategy,
     )
@@ -744,8 +720,7 @@ def run_wordle_buddy(
 
   if mode == "test":
     regression_test(
-      game, wordlist, strategy, sampling, answerlist
-    )
+      game, wordlist, strategy, sampling, answerlist)
   elif mode == "interactive":
     play_game_interactive(game, wordlist, strategy)
   elif answer:
@@ -768,13 +743,11 @@ def main():
 
   # Play game interactively.
   parser.add_argument(
-    "-i", dest="mode", action="store_const", const="interactive"
-  )
+    "-i", dest="mode", action="store_const", const="interactive")
 
   # Run a regression test.
   parser.add_argument(
-    "-t", dest="mode", action="store_const", const="test"
-  )
+    "-t", dest="mode", action="store_const", const="test")
   parser.add_argument("--sampling", default=1, type=int)
   parser.add_argument("--answer_file", default=None)
 
@@ -794,34 +767,31 @@ def main():
       "warn.unused_result": True,
     }
     directives = ",".join(
-      f"{name}={val}" for name, val in directives.items()
-    )
+      f"{name}={val}" for name, val in directives.items())
 
     flags = ("--build", "--annotate", "-X", directives)
-    sources = ("wordle_buddy.py",)
+    sources = ("wordle_buddy.py", )
     with subprocess.Popen(
       ["/usr/bin/cythonize", *flags, *sources],
-      stdout=subprocess.PIPE,
-      stderr=subprocess.STDOUT,
-      bufsize=1,
-      text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        bufsize=1,
+        text=True,
     ) as p:
 
       def build_ignored_warnings_re():
-        paths = (r"/usr/lib/",)
+        paths = (r"/usr/lib/", )
         paths = r"|".join(re.escape(path) for path in paths)
 
-        messages = (r"Unused entry 'genexpr'",)
+        messages = (r"Unused entry 'genexpr'", )
         messages = r"|".join(
-          re.escape(path) for path in messages
-        )
+          re.escape(path) for path in messages)
 
         return re.compile(
           fr"warning:("
           fr" ({paths})|"
           fr" [^:]+:[0-9]+:[0-9]+: ({messages})"
-          fr")"
-        )
+          fr")")
 
       compiling_re = re.compile(r"Compiling ")
       build_ext_re = re.compile(r"running build_ext")
@@ -834,29 +804,23 @@ def main():
       for line in p.stdout:
         line = line.rstrip()
         if build_ext_re.match(line) or ignored_warnings_re.match(
-          line
-        ):
+            line):
           continue
-        elif (
-          compiling_re.match(line)
-          or gcc_re.match(line)
-          or (not recompiling and warning_re.match(line))
-        ):
+        elif (compiling_re.match(line) or gcc_re.match(line)
+              or (not recompiling and warning_re.match(line))):
           msg()
           recompiling = True
 
         if warning_re.match(line):
           line = (
             f"{Fore.YELLOW}WARNING:{Style.RESET_ALL}"
-            f" {warning_re.sub('', line)}"
-          )
+            f" {warning_re.sub('', line)}")
         msg(line)
       error = p.wait()
       if error:
         msg(
           "{Fore.RED}ERROR:{Style.RESET_ALL}"
-          " Compilation failed. Exiting."
-        )
+          " Compilation failed. Exiting.")
         sys.exit(error)
       if recompiling:
         msg("\nDone. Running program...\n")
@@ -875,8 +839,7 @@ def main():
       if args.game is Game.HERMETIC:
         timer = lambda: 0
       prof = stack.enter_context(
-        profile.Profile(timer=timer, timeunit=1e-9)
-      )
+        profile.Profile(timer=timer, timeunit=1e-9))
 
     run_wordle_buddy(**vars(args))
 
@@ -884,8 +847,7 @@ def main():
     if args.game is Game.HERMETIC:
       print(
         "\tCollected profile successfully. Supressing "
-        "non-hermetic output."
-      )
+        "non-hermetic output.")
     else:
       Stats(prof).sort_stats(SortKey.TIME).print_stats()
 
